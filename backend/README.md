@@ -15,7 +15,6 @@ Python 3.12 · PostgreSQL 17
 ## Работа с кодом
 
 - [Сервисы: вызовы из API и обработчиков](docs/services.md)
-- [Репозитории: операции с БД и транзакции](docs/database-usage.md)
 - [Паттерны: где используются и зачем](docs/patterns.md)
 
 Код находится в `app/`, документация в `docs/`. Модели Pydantic находятся в `app/schemas/`, модели таблиц SQLAlchemy в `app/infrastructure/database/models/`

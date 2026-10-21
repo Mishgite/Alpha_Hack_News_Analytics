@@ -1,268 +1,320 @@
-# Использование сервисов
+# Сервисы
 
-[Подключение к БД](database-setup.md) · [Репозитории](database-usage.md)
+API вызывает методы сервисов, сервисы работают с БД через репозитории
 
-API вызывает сервисы из `app.services`. Они сами сохраняют изменения и закрывают сессию БД. Результат возвращается как Pydantic DTO: для JSON используется `result.model_dump(mode="json")`.
+- Все методы синхронные; из `async def` их нужно вызывать через `asyncio.to_thread`
+- Сервис сам открывает сессию и сохраняет изменения; вручную вызывать `commit()` не нужно
+- Результаты являются Pydantic-моделями и доступны после закрытия сессии
+- `user_id` берётся из результата `authenticate()`, а не из тела запроса клиента
+- ID имеют тип `UUID`, кроме `company_id` и ID тегов, у которых тип `str`
+- В сигнатурах параметры после `*` передаются по имени; значения после `=` используются по умолчанию
 
-В примерах `user_id` берётся из проверенной сессии. ID записей имеют тип `UUID`, ID компаний и тегов имеют тип `str`. Рабочая папка для Python: `backend`.
-
-## Пользователь и настройки
+## ProfileService: пользователи и компании
 
 ```python
 from app.services import ProfileService
-from app.schemas.services import Registration, UserSettings, Interests
-
-profiles = ProfileService()
-companies = profiles.list_companies(limit=50, offset=0)
-grant = profiles.register_demo(
-    Registration(company_id=companies[0].id, city="Москва", job_role="cfo"),
-    session_hours=24,
-)
-token = grant.token.get_secret_value()
-user = profiles.authenticate(token)
-user_id = user.id
-```
-
-Нужна хотя бы одна загруженная компания. `grant` содержит `user`, `token`, `expires_at`. Токен извлекается отдельно: обычный `model_dump()` его скрывает. Повторная регистрация создаёт нового пользователя.
-
-```python
-profile = profiles.get_profile(user_id)
-user = profiles.update_settings(user_id, UserSettings(city="Казань", job_role="cfo"))
-profile = profiles.switch_company(user_id, company_id="company-002")
-profile = profiles.set_interests(
-    user_id, Interests(personal=["currency"], disabled=["sport"]),
-)
-ranking_profile = profiles.get_ranking_profile(user_id)
-profiles.logout(token)
-```
-
-- `get_profile`, `switch_company`, `set_interests`: возвращают `ProfileInputs` с пользователем, компанией, темами и реакциями
-- `update_settings`: возвращает `UserData`; `get_ranking_profile`: `RankingProfile` с весами тем
-- `set_interests` заменяет оба списка целиком; теги должны существовать, быть активными и не входить сразу в оба списка
-- `switch_company` сохраняет личные темы, но закрывает доступ к лентам другой компании
-- `job_role`: `ceo`, `cfo`, `accountant`, `treasury`, `employee`, `other`
-
-### Импорт компании
-
-Внутренние методы для загрузчика данных:
-
-```python
+from app.schemas.services import Registration, UserSettings, Interests, ProfilePolicy
 from app.schemas.database import CompanyData, CompanyTagInput
-
-company = profiles.save_company(CompanyData(id="company-001", profile_version="v1"))
-profiles.set_company_tags(company.id, [
-    CompanyTagInput(tag_id="currency", origin="rule", base_weight=1.0),
-])
 ```
 
-`save_company` заменяет профиль целиком. `set_company_tags` заменяет все темы компании, `origin` допускает `rule` или `manual`, вес от 0 до 2. Теги предварительно регистрируются через `NewsService`.
+Создание: `ProfileService()` или `ProfileService(policy=...)`
+`policy: ProfilePolicy` задаёт веса тем по должностям и влияние реакций; при изменении настроек одна и та же политика передаётся в `FeedService`
 
-### Настройки весов
+### `list_companies(*, limit: int = 50, offset: int = 0) -> list[CompanyData]`
+
+Возвращает компании для выбора, по возрастанию ID
+
+- `limit`: количество компаний, от 1 до 100
+- `offset`: сколько записей пропустить, от 0
+
+### `register_demo(data: Registration, *, session_hours: int = 24) -> SessionGrant`
+
+Создаёт пользователя и сессию; каждый вызов создаёт нового пользователя
+
+- `data`: `company_id` существующей компании, `city`, `job_role="other"`
+- `job_role`: `ceo`, `cfo`, `accountant`, `treasury`, `employee` или `other`
+- `session_hours`: срок сессии в часах, от 1 до 720
+- Результат: `user`, `token`, `expires_at`; строка токена доступна через `token.get_secret_value()`
+
+### `authenticate(token: str) -> UserData`
+
+Возвращает пользователя по токену сессии: `id`, `company_id`, `city`, `job_role`, `access_role`
+Недействующий или просроченный токен вызывает `PermissionError`
+
+### `logout(token: str) -> None`
+
+Закрывает сессию по токену; повторный вызов ничего не меняет
+
+### `get_profile(user_id: UUID) -> ProfileInputs`
+
+Возвращает пользователя, компанию, корпоративные темы, личные и отключённые теги, счётчики реакций по тегам
+
+### `switch_company(user_id: UUID, company_id: str) -> ProfileInputs`
+
+Выбирает существующую компанию и возвращает обновлённый профиль
+Личные интересы сохраняются; ленты прежней компании становятся недоступны
+
+### `update_settings(user_id: UUID, settings: UserSettings) -> UserData`
+
+Изменяет настройки пользователя и возвращает обновлённые данные
+
+- `settings`: обязательные `city` и `job_role`
+- Права доступа этим методом не меняются
+
+### `set_interests(user_id: UUID, settings: Interests) -> ProfileInputs`
+
+Полностью заменяет настройки интересов и возвращает обновлённый профиль
+
+- `settings.personal: list[str]`: ID выбранных тегов
+- `settings.disabled: list[str]`: ID отключённых тегов
+- Оба списка обязательны, могут быть пустыми и не должны пересекаться
+- Теги должны существовать и быть активными
+
+### `get_ranking_profile(user_id: UUID) -> RankingProfile`
+
+Возвращает профиль для ранжировщика: веса тем, отрасль, географию, интересующие факторы и версию профиля
+
+### `save_company(company: CompanyData) -> CompanyData`
+
+Для загрузки компаний из датасета: создаёт компанию или полностью заменяет её профиль
+
+- `company`: обязательные `id` и `profile_version`, остальные поля описаны в [CompanyData](../app/schemas/database.py)
+- Неуказанные поля принимают значения по умолчанию, прежние значения не сохраняются
+- Результат: сохранённая компания
+
+### `set_company_tags(company_id: str, tags: list[CompanyTagInput]) -> None`
+
+Для загрузки корпоративных интересов: полностью заменяет темы компании
+
+- `tags`: элементы с `tag_id`, `origin` (`rule` или `manual`), `base_weight` от 0 до 2
+- Теги должны существовать и быть активными; пары `tag_id` и `origin` не повторяются
+- Пустой список удаляет корпоративные темы; личные интересы пользователей сохраняются
+
+## NewsService: новости и признаки
 
 ```python
-from app.schemas.services import ProfilePolicy
-
-policy = ProfilePolicy(role_weights={"cfo": {"currency": 1.0}})
-profiles = ProfileService(policy=policy)
-```
-
-По умолчанию веса должностей пустые. Одна и та же `policy` передаётся в `ProfileService` и `FeedService`. Вес темы берётся как максимум корпоративного, должностного и личного веса. Реакции корректируют его в пределах от 0 до 2, отключённые темы получают 0. Расчёт находится в [build_profile](../app/services/profiles.py).
-
-## Новости
-
-### Сохранить или обновить
-
-```python
-from datetime import UTC, datetime
 from app.services import NewsService
 from app.schemas.services import IncomingNews
-
-news = NewsService()
-news.register_source("example-rss", kind="rss")
-news.register_tag("currency", display_name="Валютный рынок")
-article = news.save_news(IncomingNews(
-    source="example-rss",
-    external_id="article-001",
-    title="Изменение курса валют",
-    body="Текст новости",
-    published_at=datetime.now(UTC),
-))
+from app.schemas.news import NewsFeatures, NewsTag, Geography
 ```
 
-Возвращает `StoredNews`, включая `news_id` и `content_hash`. Нужен `external_id` или HTTP(S)-адрес `url`. Повторная загрузка обновляет запись того же источника. Изменение текста или даты сбрасывает разметку.
+Создание: `NewsService()`
 
-### Прочитать и разметить
+### `list_tags() -> list[TagData]`
 
-```python
-article = news.get_news(article.news_id)          # текст и признаки новости
-tags = news.list_tags()                          # активные теги
-pending = news.list_pending_news(limit=50)        # новости без разметки
-```
+Возвращает активные теги: `id` и `display_name`
 
-`list_pending_news` возвращает до 500 новостей без разметки, начиная с загруженных раньше. Метод не закрепляет их за обработчиком.
+### `get_news(news_id: UUID) -> StoredNews`
 
-```python
-from app.schemas.news import Geography, NewsFeatures, NewsTag
+Возвращает новость: `news_id`, `title`, `text`, `published_at`, `source_url`, `content_hash`, `tagging_status`, `tagging_version`, `features`
 
-# здесь пример признаков, в приложении их возвращает разметчик
-features = NewsFeatures(
-    news_id=article.news_id,
-    tags=[NewsTag(id="currency", confidence=0.9)],
-    geography=Geography(),
-)
-ready = news.save_features(
-    features, version="tagger-v1", expected_content_hash=article.content_hash,
-)
-```
+Следующие методы предназначены для загрузки и разметки новостей
 
-Возвращает `StoredNews` со статусом `ready`. Если текст успел измениться, возникает `ValueError`: требуется прочитать и разметить новую версию.
+### `register_source(code: str, *, kind: str) -> None`
 
-## Лента
+Добавляет источник, если его ещё нет
+`code` задаёт код источника, `kind` его тип; обе строки обязательны и непустые
+Существующий источник не обновляет
 
-### Создать
+### `register_tag(tag_id: str, *, display_name: str) -> None`
+
+Добавляет тег, если его ещё нет
+`tag_id` задаёт ID тега, `display_name` отображаемое название; обе строки непустые
+Существующий тег не обновляет
+
+### `save_news(article: IncomingNews) -> StoredNews`
+
+Сохраняет новость или обновляет ранее загруженную запись того же источника
+
+- `article.source`: код зарегистрированного активного источника
+- `article.title`, `article.body`: заголовок и текст
+- `article.published_at`: дата публикации с часовым поясом
+- `article.external_id` или `article.url`: нужен хотя бы один идентификатор; URL должен быть HTTP(S)
+- `article.language`: язык, по умолчанию `"ru"`
+- Результат: сохранённая новость; изменение текста или даты сбрасывает её разметку
+
+### `list_pending_news(*, limit: int = 50) -> list[StoredNews]`
+
+Возвращает новости без разметки, начиная с загруженных раньше
+`limit` от 1 до 500; метод только читает список, не закрепляет новости за обработчиком
+
+### `save_features(features: NewsFeatures, *, version: str, expected_content_hash: str) -> StoredNews`
+
+Сохраняет признаки новости и устанавливает статус разметки `ready`
+
+- `features`: обязательные `news_id`, `tags`, `geography`; дополнительные поля в [NewsFeatures](../app/schemas/news.py)
+- `tags`: список `NewsTag(id=..., confidence=...)`, уверенность от 0 до 1; теги активные, без повторов
+- `geography`: `Geography` с полями `country_code`, `region_codes`, `nationwide`; неизвестные значения можно не задавать
+- `version`: непустая версия разметчика
+- `expected_content_hash`: `content_hash` новости, взятой для разметки; при несовпадении сохранение отклоняется
+- Результат: новость с сохранёнными признаками
+
+## FeedService: персональная лента
 
 ```python
 from app.services import FeedService
-
-# rank_news передаётся из модуля ML: RankingRequest -> RankingResult
-feed = FeedService(ranker=rank_news, policy=policy)
-page = feed.create_feed(user_id, days=7, candidate_limit=500, page_size=20, ttl_minutes=30)
+from app.schemas.ranking import RankingRequest, RankingResult
 ```
 
-Параметры:
+Создание: `FeedService(ranker=...)`
 
-- `days`: за сколько последних дней брать новости, от 1 до 365
-- `candidate_limit`: сколько новостей передать ранжировщику, от 1 до 5000
-- `page_size`: сколько новостей вернуть на странице, от 1 до 100
-- `ttl_minutes`: сколько минут доступна сохранённая лента, от 1 до 1440
+- `ranker`: функция, принимающая `RankingRequest` и возвращающая `RankingResult`; сюда подключается выбранная модель ранжирования
+- `ranking_config_version="v1"`: версия настроек ранжирования
+- `feature_schema_version="v1"`: версия схемы признаков
+- `policy=None`: настройки `ProfilePolicy`, как в `ProfileService`
+- Без `ranker` доступен только `get_page()`; сам алгоритм ранжирования в сервисе не реализован
 
-Результат `SnapshotPage`: `snapshot_id`, `items`, `has_more`, `next_position`.
+### `create_feed(user_id: UUID, *, days: int = 7, candidate_limit: int = 500, page_size: int = 20, ttl_minutes: int = 30) -> SnapshotPage`
 
-### Следующая страница
+Ранжирует новости, сохраняет их порядок в снимке ленты и возвращает первую страницу
+
+- `days`: глубина выборки в днях, от 1 до 365
+- `candidate_limit`: максимум новостей для ранжировщика, от 1 до 5000
+- `page_size`: размер первой страницы, от 1 до 100
+- `ttl_minutes`: срок действия снимка в минутах, от 1 до 1440
+- Результат: `snapshot_id`, `items`, `next_position`, `has_more`
+
+### `get_page(user_id: UUID, snapshot_id: UUID, *, position: int = 0, limit: int = 20) -> SnapshotPage`
+
+Возвращает страницу ранее созданной ленты с сохранённым порядком новостей
+
+- `snapshot_id`: ID из результата `create_feed()`
+- `position`: начальная позиция от 0; для следующей страницы используется `next_position`, если `has_more=True`
+- `limit`: размер страницы, от 1 до 100
+- Результат: те же поля, что у `create_feed()`; элементы `items` содержат новость и результат ранжирования
+- Снимок должен принадлежать пользователю и текущей компании, срок его действия не должен истечь
+
+## FeedbackService: реакции и показы
 
 ```python
-if page.has_more:
-    page = feed.get_page(user_id, page.snapshot_id, position=page.next_position, limit=20)
-```
-
-Порядок новостей фиксируется при создании ленты. Для обновления интересов или истёкшей ленты вызывается `create_feed`.
-
-**Для подключения ML:** ранжировщик вызывается без открытой сессии БД. Он должен вернуть уникальные новости из полученных кандидатов. Если профиль или признаки изменились за время расчёта, сервис вызывает `ValueError`, и ленту нужно построить заново. Без `ranker` работает только `get_page`.
-
-## Реакции и показы
-
-```python
-from datetime import UTC, datetime
-from uuid import uuid4
 from app.services import FeedbackService
-
-feedback = FeedbackService()
-counts = feedback.set_reaction(user_id, news_id, "like", snapshot_id=snapshot_id)
-event = feedback.record_impression(
-    event_id=uuid4(), user_id=user_id, snapshot_id=snapshot_id,
-    news_id=news_id, occurred_at=datetime.now(UTC),
-)
 ```
 
-- Реакция: `like`, `dislike` или `none` для снятия
-- `counts`: `news_id`, `likes_cnt`, `dislikes_cnt`; `event`: `InteractionData`
-- Новость должна входить в доступную пользователю ленту
-- При повторной отправке показа используется прежний `event_id`, при новом показе создаётся новый
-- Повтор той же реакции не увеличивает счётчики
+Создание: `FeedbackService()`
+Оба метода проверяют доступ к снимку ленты и наличие в нём новости
 
-## AI-разбор
+### `set_reaction(user_id: UUID, news_id: UUID, reaction: Reaction, *, snapshot_id: UUID) -> ReactionCounts`
 
-### Запрос и получение результата
+Сохраняет реакцию пользователя; повтор той же реакции не меняет счётчики
+
+- `reaction`: строка `"like"`, `"dislike"` или `"none"` для снятия реакции
+- `snapshot_id`: ID снимка, из которого показана новость
+- Результат: `news_id`, `likes_cnt`, `dislikes_cnt`
+
+### `record_impression(*, event_id: UUID, user_id: UUID, snapshot_id: UUID, news_id: UUID, occurred_at: datetime) -> InteractionData`
+
+Записывает показ новости пользователю
+
+- `event_id`: новый UUID для каждого показа; при повторной отправке того же события ID сохраняется
+- `snapshot_id`: ID снимка с новостью
+- `occurred_at`: время показа с часовым поясом, не позднее текущего
+- Результат: сохранённое событие с переданными ID, временем и типом события
+
+## InsightService: AI-разборы и вопросы
 
 ```python
-from uuid import uuid4
 from app.services import InsightService
-
-insights = InsightService()
-request_key = str(uuid4())
-job = insights.request_analysis(user_id, news_id, idempotency_key=request_key)
-job = insights.get_job(user_id, job.id)
-if job.status == "ready":
-    analysis = insights.get_analysis(user_id, job.analysis_id)
-    result = analysis.result
+from app.schemas.services import AnalysisVersions, AnalysisWork
+from app.schemas.insights import InsightResult, SourceReference
 ```
 
-`request_analysis` и `get_job` возвращают `JobData`. Один запрос при повторной отправке использует прежний ключ. Для нового разбора нужен новый ключ, в том числе после `failed`.
+Создание: `InsightService()`
 
-`get_analysis` возвращает `AnalysisData`: ответ в `result`, шаги агента в `trace`. Полнота ответа указана в `analysis.status`: `ready` или `partial`.
+### `request_analysis(user_id: UUID, news_id: UUID, *, idempotency_key: str) -> JobData`
 
-### Обработать задание
+Создаёт задание на разбор новости для текущей компании пользователя
 
-Внутренние методы для worker. `versions` имеет тип [AnalysisVersions](../app/schemas/services.py): `model_id`, `prompt_version`, `report_corpus_version`, `agent_version`, `retrieval_version`. `agent(work)` в примере возвращает `InsightResult` и список словарей с шагами агента.
+- `idempotency_key`: непустой ключ запроса; повтор с тем же ключом и параметрами возвращает прежнее задание
+- Результат: задание, включая `id`, `status`, `analysis_id`, `error_code`
+- Сам AI этим методом не вызывается
 
-```python
-def process_one(insights, agent, versions):
-    worker_id = "worker-1"
-    job = insights.claim_job(worker_id, lease_seconds=300, max_attempts=3)
-    if job is None:
-        return None
-    try:
-        work = insights.prepare_job(job.id, worker_id, job.attempts, versions=versions)
-        cached = insights.get_cached_result(work)
-        if cached is not None:
-            result, trace = cached.result, cached.trace
-        else:
-            result, trace = agent(work)
-        return insights.complete_job(work, result, trace=trace)
-    except Exception:
-        try:
-            insights.fail_job(job.id, worker_id, job.attempts, error_code="analysis_failed")
-        except ValueError:
-            # попытка могла истечь или перейти другому worker
-            pass
-        raise
-```
+### `get_job(user_id: UUID, job_id: UUID) -> JobData`
 
-- `claim_job`: `JobData` или `None`, если заданий нет
-- `prepare_job`: `AnalysisWork` с полями `job`, `news`, `context`, `versions`, `cache_key`
-- `get_cached_result`: `AnalysisData` или `None`
-- `complete_job`: сохраняет ответ и завершает задание, возвращает `AnalysisData`
-- `fail_job`: записывает ошибку, возвращает `JobData` со статусом `failed`
+Возвращает состояние задания по ID из `request_analysis()`
+Проверяет владельца и текущую компанию пользователя
 
-У `complete_job` есть параметры `status="ready"`, `ttl_hours=24` и `trace=None`. Для неполного ответа передаётся `status="partial"`. Срок кеша от 1 до 720 часов. Старые разборы и их вопросы сохраняются при пересчёте.
+### `get_analysis(user_id: UUID, analysis_id: UUID) -> AnalysisData`
 
-Срок обработки задания не продлевается автоматически. После истечения задание может забрать другой worker. `failed` автоматически не перезапускается. Сам цикл worker и AI-агент пока не реализованы.
+Возвращает сохранённый разбор: `id`, `result: InsightResult`, `status` и метаданные
+`analysis_id` берётся из завершённого задания; доступ проверяется по текущей компании
 
-### Поиск по отчётам и вопросы
+### `get_history(user_id: UUID, analysis_id: UUID, conversation_id: UUID, *, limit: int = 5) -> list[QuestionData]`
 
-```python
-chunks = insights.search_reports("валютный рынок", limit=5)
-messages = insights.get_history(user_id, analysis_id, conversation_id, limit=5)
-message = insights.save_answer(
-    user_id, analysis_id, conversation_id,
-    question=question, answer=answer, sources=sources,
-)
-```
+Возвращает последние вопросы и ответы пользователя в указанном диалоге, от старых к новым
 
-- `search_reports`: `list[ReportChunkData]`, включая текст, страницу, название файла и ссылку; `limit` от 1 до 50
-- `get_history`: `list[QuestionData]` данного пользователя и диалога от старых сообщений к новым; `limit` от 1 до 100
-- `save_answer`: `QuestionData`; сохраняет уже готовый ответ, AI не вызывает
-- `question`: до 1000 символов; `answer` непустой; `sources`: непустой список [SourceReference](../app/schemas/insights.py) с уникальными ID
+- `analysis_id`: ID разбора
+- `conversation_id`: UUID диалога, один и тот же для всех его сообщений
+- `limit`: число сообщений, от 1 до 100
 
-## Вызов из async API
+### `save_answer(user_id: UUID, analysis_id: UUID, conversation_id: UUID, *, question: str, answer: str, sources: list[SourceReference]) -> QuestionData`
 
-Методы сервисов синхронные. В `async def` весь вызов выполняется через `asyncio.to_thread`:
+Сохраняет вопрос и уже подготовленный ответ; генерацию ответа выполняет AI-компонент
 
-```python
-import asyncio
+- `analysis_id`, `conversation_id`: ID разбора и диалога
+- `question`: непустой вопрос, до 1000 символов
+- `answer`: непустой текст ответа
+- `sources`: непустой список источников с уникальными `id`; поля в [SourceReference](../app/schemas/insights.py)
+- Результат: запись вопроса и ответа с ID, источниками и датой создания
 
-async def load_profile(token: str):
-    user = await asyncio.to_thread(profiles.authenticate, token)
-    profile = await asyncio.to_thread(profiles.get_profile, user.id)
-    return profile.model_dump(mode="json")
-```
+### Методы для обработчика AI-заданий
 
-## Ошибки
+### `claim_job(worker_id: str, *, lease_seconds: int = 120, max_attempts: int = 3) -> JobData | None`
+
+Берёт доступное задание и закрепляет его за обработчиком на ограниченное время
+
+- `worker_id`: непустой идентификатор обработчика
+- `lease_seconds`: срок обработки в секундах, от 1
+- `max_attempts`: максимум попыток обработки, от 1
+- Результат: задание с `id`, `attempts`, `lease_until` или `None`, если заданий нет
+
+### `prepare_job(job_id: UUID, worker_id: str, attempt: int, *, versions: AnalysisVersions) -> AnalysisWork`
+
+Собирает данные для AI-разбора
+
+- `job_id`, `worker_id`: полученное задание и его обработчик
+- `attempt`: значение `attempts` из `claim_job()`
+- `versions`: обязательные строки `model_id`, `prompt_version`, `report_corpus_version`, `agent_version`, `retrieval_version`
+- Результат: `job`, `news`, `context`, `versions`, `cache_key`
+
+### `get_cached_result(work: AnalysisWork) -> AnalysisData | None`
+
+Ищет готовый разбор с актуальным сроком кеша по данным из `prepare_job()`
+Возвращает разбор или `None`; само задание не завершает
+
+### `complete_job(work: AnalysisWork, result: InsightResult, *, status: Literal["ready", "partial"] = "ready", ttl_hours: int = 24, trace: list[dict[str, JsonValue]] | None = None) -> AnalysisData`
+
+Сохраняет разбор и завершает задание
+
+- `work`: результат `prepare_job()`
+- `result`: подготовленный AI-разбор; поля в [InsightResult](../app/schemas/insights.py)
+- `status`: полный (`ready`) или частичный (`partial`) разбор
+- `ttl_hours`: срок кеша в часах, от 1 до 720
+- `trace`: необязательный список шагов агента в виде JSON-совместимых словарей
+- Результат: сохранённый разбор
+
+### `fail_job(job_id: UUID, worker_id: str, attempt: int, *, error_code: str) -> JobData`
+
+Помечает задание как `failed` и возвращает его обновлённое состояние
+`attempt` берётся из `claim_job()`, `error_code` является непустым кодом ошибки
+Автоматическую новую попытку не создаёт
+
+`prepare_job()`, `get_cached_result()`, `complete_job()` и `fail_job()` требуют действующей попытки обработки, закреплённой за указанным обработчиком
+
+### `search_reports(query: str, *, limit: int = 5) -> list[ReportChunkData]`
+
+Находит фрагменты готовых отчётов для RAG через русский полнотекстовый поиск
+
+- `query`: непустой поисковый запрос
+- `limit`: число фрагментов, от 1 до 50
+- Результат: текст фрагментов, страницы и метаданные исходных отчётов
+
+## Ошибки и модели
 
 - `LookupError`: запись не найдена
-- `PermissionError`: сессия недействительна или нет доступа к данным
-- `ValueError`: неверные параметры, истёкшая лента или попытка обработки, данные изменились
-- `pydantic.ValidationError`: входные данные не соответствуют DTO
-- Ошибки SQLAlchemy: соединение или ограничения БД
+- `PermissionError`: недействующая сессия или нет доступа
+- `ValueError`: неверные параметры, истёкший снимок ленты или данные изменились во время обработки
+- `pydantic.ValidationError`: неверные поля входной модели
 
-HTTP-коды назначает API. Импорт компаний, регистрация источников и методы worker предназначены для внутреннего кода. Демо-регистрация пока не проверяет принадлежность сотрудника к компании.
+Полные поля моделей: [входные данные сервисов](../app/schemas/services.py), [результаты из БД](../app/schemas/database.py), [новости](../app/schemas/news.py), [ранжирование](../app/schemas/ranking.py), [AI-разборы](../app/schemas/insights.py)
+
+У всех сервисов есть необязательный параметр конструктора `uow_factory=UnitOfWork` для замены способа открытия транзакций; при обычном использовании он не передаётся
