@@ -2,6 +2,22 @@
 
 Требования: Python **3.12**, PostgreSQL **17.x**. Основной способ настройки и запуска: PyCharm.
 
+## После получения кода
+
+1. В PyCharm выбрать **File > Open** и открыть корень репозитория `Alpha_Hack_News_Analytics`, в котором находятся `backend` и `frontend`.
+2. При первой настройке выполнить шаги ниже. Окружение `.venv`, файл `.env` и локальная база не скачиваются при `git clone` или `git pull`.
+
+Расположение локальных файлов:
+
+```text
+backend/
+  app/
+    .venv/             окружение Python, создаётся на каждом компьютере
+    .env               подключение к локальной БД, создаётся вручную
+    .env.example       образец из репозитория
+    requirements.txt   зависимости из репозитория
+```
+
 ## 1. Установить PostgreSQL
 
 Если PostgreSQL 17 уже установлен, перейти к шагу 2.
@@ -14,16 +30,32 @@
 
 [Документация по установке PostgreSQL в Windows](https://www.enterprisedb.com/docs/supported-open-source/postgresql/installing/windows/).
 
-## 2. Выбрать интерпретатор и установить зависимости
+## 2. Создать окружение в backend/app/.venv
 
-1. Открыть настройки PyCharm и найти **Python Interpreter** через поиск.
-2. Выбрать существующее окружение с Python **3.12**. Если его нет, через **Add Interpreter > Add Local Interpreter** создать **Virtualenv** на основе Python 3.12. Папка окружения может быть любой, например `backend/app/.venv`.
-3. Для папки `backend` выбрать **Mark Directory as > Sources Root**.
-4. Открыть `backend/app/requirements.txt`, нажать **Install requirements** в уведомлении редактора и дождаться установки.
+1. Открыть **Settings** и найти **Python Interpreter** через поиск.
+2. Выбрать **Add Interpreter > Add Local Interpreter**, затем создание нового **Virtualenv**.
+3. В **Base interpreter** выбрать установленный Python **3.12**.
+4. В **Location** указать полный путь к папке окружения внутри своей копии проекта:
 
-Если уведомления нет, проверить в настройках **Python > Tools > Integrated Tools** поле **Package requirements file for SDK**: оно должно указывать на `backend/app/requirements.txt`. Также должна быть включена проверка **Unsatisfied package requirements** в **Editor > Inspections**.
+   ```text
+   <корень репозитория>\backend\app\.venv
+   ```
 
-Пакеты устанавливаются в выбранное окружение. [Интерпретатор проекта](https://www.jetbrains.com/help/pycharm/configuring-python-interpreter.html), [установка зависимостей](https://www.jetbrains.com/help/pycharm/managing-dependencies.html#install-the-required-packages-from-requirements-txt).
+5. **Inherit packages from base interpreter** оставить выключенным. Нажать **OK / Create** и дождаться создания окружения.
+6. Проверить, что интерпретатором проекта выбран:
+
+   ```text
+   <корень репозитория>\backend\app\.venv\Scripts\python.exe
+   ```
+
+7. Для папки `backend` выбрать **Mark Directory as > Sources Root**.
+8. Открыть `backend/app/requirements.txt`, нажать **Install requirements** в уведомлении редактора и дождаться установки.
+
+Если `.venv` уже создано, повторно его создавать не требуется: в **Add Local Interpreter** выбрать существующий интерпретатор по пути из пункта 6, затем установить зависимости.
+
+Если кнопки **Install requirements** нет, в настройках **Python > Tools > Integrated Tools** указать `backend/app/requirements.txt` в поле **Package requirements file for SDK**. Проверка **Unsatisfied package requirements** должна быть включена в **Editor > Inspections**.
+
+Все зависимости устанавливаются именно в выбранное окружение проекта. [Создание Virtualenv в PyCharm](https://www.jetbrains.com/help/pycharm/creating-virtual-environment.html), [установка зависимостей](https://www.jetbrains.com/help/pycharm/managing-dependencies.html#install-the-required-packages-from-requirements-txt).
 
 ## 3. Создать базу alfa_news
 
@@ -91,16 +123,12 @@ print('Created app/.env')
 
 </details>
 
-## 5. Создать таблицы кнопкой Run
+## 5. Запустить создание таблиц
 
-1. Открыть **Run > Edit Configurations**, нажать **+ > Python**.
-2. В поле **Name** указать `Создать таблицы`.
-3. Переключить **Script path** на **Module name** и указать `app.infrastructure.database.init_db`.
-4. В **Python interpreter** выбрать интерпретатор проекта из шага 2.
-5. В **Working directory** выбрать папку `backend` этого репозитория.
-6. Поле **Parameters** оставить пустым. Нажать **Apply > Run**.
+1. Открыть `backend/app/infrastructure/database/init_db.py` в PyCharm.
+2. Правой кнопкой по файлу выбрать **Run 'init_db'**.
 
-Абсолютный путь к Python в команду вводить не требуется: используется выбранный интерпретатор. [Документация конфигурации запуска](https://www.jetbrains.com/help/pycharm/run-debug-configuration-python.html).
+Используется интерпретатор проекта из шага 2. Настраивать Module name, Parameters или Working directory не требуется.
 
 Модуль [init_db.py](../app/infrastructure/database/init_db.py) читает подключение из `app/.env` и выполняет [schema.sql](../app/infrastructure/database/schema.sql) одной транзакцией. Создаёт таблицы, связи, индексы и триггер счётчиков реакций.
 
@@ -114,28 +142,17 @@ Reaction trigger: OK
 OK
 ```
 
-При повторном запуске выводится `Schema already exists`, затем проверяется наличие таблиц и включённого триггера. Данные сохраняются. Если схема неполная, команда завершится с ошибкой. Этот модуль не обновляет структуру существующих таблиц.
+При повторном запуске выводится `Schema already exists`, затем проверяется наличие таблиц и включённого триггера. Данные сохраняются. Если схема неполная, команда завершится с ошибкой. Для повторной проверки достаточно снова запустить тот же файл. Скрипт не обновляет структуру существующих таблиц.
 
 Для просмотра в pgAdmin раскрыть **Databases > alfa_news > Schemas > public > Tables**. Если список пустой, выбрать **Refresh** в контекстном меню **Tables**. После создания схемы таблицы ещё не содержат данных приложения.
 
-## 6. Проверка и повторный запуск
-
-В **Run > Edit Configurations** скопировать конфигурацию `Создать таблицы`, назвать её `Проверить БД`, в **Parameters** указать `--check` и сохранить.
-
-Для проверки выбрать `Проверить БД` и нажать **Run**. Создавать базу и окружение заново не требуется. После изменения зависимостей повторить установку из `requirements.txt` по шагу 2.
-
-### Вариант для терминала
-
-Для окружения, созданного именно в `backend/app/.venv`, из папки `backend`:
-
-```powershell
-& .\app\.venv\Scripts\python.exe -m app.infrastructure.database.init_db
-& .\app\.venv\Scripts\python.exe -m app.infrastructure.database.init_db --check
-```
-
-Первая команда создаёт таблицы, вторая только проверяет. При другом расположении окружения заменить путь к `python.exe` на указанный в PyCharm. Терминал может использовать другой Python, поэтому наличие настроенного интерпретатора в IDE само по себе не определяет команду `python` в терминале.
-
 HTTP-сервер пока не реализован. Для подключения API используются [сервисы](services.md). Работа внутри слоя хранения описана в [документации репозиториев](database-usage.md).
+
+## После следующих git pull
+
+- Окружение `backend/app/.venv`, файл `backend/app/.env` и базу создавать заново не нужно
+- Если изменился `requirements.txt`, повторить **Install requirements** из шага 2
+- Изменение структуры БД требует отдельных инструкций к обновлению: `init_db.py` не обновляет существующие таблицы
 
 ## Ошибки
 
@@ -145,5 +162,4 @@ HTTP-сервер пока не реализован. Для подключен�
 - `app/.env already exists`: использовать существующий файл, сверив параметры подключения
 - `database_url: Field required`: добавить `DATABASE_URL` в `app/.env`
 - `No module named sqlalchemy` / `psycopg`: установить зависимости по шагу 2 в выбранное окружение
-- `No module named app`: установить рабочую папку `backend`, в PyCharm запускать модуль из шага 5
-- `Missing tables` / `Missing or disabled trigger`: схема неполная; `--check` ничего не создаёт, для пустой базы запустить конфигурацию из шага 5; для частично созданной схемы требуется исправить её отдельно
+- `Missing tables` / `Missing or disabled trigger`: схема создана частично или изменена; скрипт не исправляет существующую структуру автоматически

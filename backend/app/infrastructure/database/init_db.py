@@ -4,6 +4,10 @@ import argparse
 import sys
 from pathlib import Path
 
+if __name__ == "__main__" and not __package__:
+    # при запуске файла напрямую добавляем backend в путь поиска пакета app
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
 import psycopg
 from sqlalchemy import Connection, Engine, inspect, text
 from sqlalchemy.exc import SQLAlchemyError

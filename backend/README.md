@@ -6,16 +6,11 @@ Python 3.12 · PostgreSQL 17
 
 [Пошаговая инструкция](docs/database-setup.md): установка PostgreSQL, окружение, создание базы через pgAdmin или команду, подключение, создание таблиц через Python и настройка PyCharm
 
-После настройки запуск выполняется кнопкой **Run** в PyCharm:
+После первого `git clone` или `git pull` создать в PyCharm окружение Python 3.12 в **`backend/app/.venv`**, выбрать его интерпретатором проекта и установить зависимости из `backend/app/requirements.txt`. Затем настроить локальную БД и `backend/app/.env` по инструкции выше. Окружение, `.env` и база не передаются через Git.
 
-1. **Run > Edit Configurations > + > Python**
-2. **Module name**: `app.infrastructure.database.init_db`
-3. **Python interpreter**: выбранный интерпретатор проекта с Python 3.12
-4. **Working directory**: папка `backend` этого репозитория
-5. **Parameters**: пусто для создания таблиц, `--check` для проверки
-6. **Apply > Run**
+После настройки открыть [init_db.py](app/infrastructure/database/init_db.py) в PyCharm и выбрать **Run 'init_db'** в контекстном меню файла.
 
-Окружение может находиться в любой папке. Путь `app/.venv` не обязателен. [Настройки запуска PyCharm](https://www.jetbrains.com/help/pycharm/run-debug-configuration-python.html).
+Используется интерпретатор проекта. При первом запуске создаются таблицы, при повторном проверяется их наличие и триггер. Отдельная конфигурация запуска не требуется.
 
 ## Работа с кодом
 
