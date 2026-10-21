@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: parser
+Version: 0.1.0
+Summary: Unified news and market data parser library for Alfa Hackathon
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: feedparser>=6.0
+Requires-Dist: httpx>=0.27
+Requires-Dist: pandas>=2.0
+Requires-Dist: pydantic>=2.0

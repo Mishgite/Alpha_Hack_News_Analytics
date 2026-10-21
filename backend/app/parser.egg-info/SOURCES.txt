@@ -1,0 +1,14 @@
+pyproject.toml
+parser/__init__.py
+parser/aggregator.py
+parser/api.py
+parser/models.py
+parser/moex.py
+parser/normalize.py
+parser/rss.py
+parser/sources.py
+parser.egg-info/PKG-INFO
+parser.egg-info/SOURCES.txt
+parser.egg-info/dependency_links.txt
+parser.egg-info/requires.txt
+parser.egg-info/top_level.txt
