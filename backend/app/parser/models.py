@@ -17,8 +17,17 @@ class NewsItem:
     url: str = ""
     published_at: str = ""
     tags: List[str] = field(default_factory=list)
-    language: str = "ru"
+    language: str = "und"
     raw: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self) -> None:
+        # Do not label every article Russian just because a source omitted language.
+        # Short summaries are not sufficient for reliable detection, so "und" is
+        # retained until the full article body is extracted.
+        if not self.language or self.language.lower() in {"auto", "und"}:
+            from .article import detect_language
+
+            self.language = detect_language(self.text or self.title, fallback="und")
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

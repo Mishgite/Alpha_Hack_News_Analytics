@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import logging
 
 import httpx
 
 from .models import NewsItem
 from .normalize import normalize_date, strip_html
+from .article import enrich_news_items
 from .rss import fetch_rss_feed
 
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Open RSS feeds (no key, no signup)
@@ -49,6 +53,7 @@ OPEN_RSS_FEEDS: Dict[str, str] = {
 def fetch_open_rss_feeds(
     feeds: Optional[List[str]] = None,
     timeout: float = 20.0,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     """Fetch any subset of OPEN_RSS_FEEDS (or all of them) autonomously."""
     selected = feeds or list(OPEN_RSS_FEEDS.keys())
@@ -58,10 +63,11 @@ def fetch_open_rss_feeds(
         if not url:
             continue
         try:
-            items.extend(fetch_rss_feed(url, source=name))
-        except Exception:
+            items.extend(fetch_rss_feed(url, source=name, timeout=timeout, fetch_full_text=False))
+        except Exception as exc:
+            logger.warning("Could not parse RSS source %s (%s)", name, type(exc).__name__)
             continue
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +75,11 @@ def fetch_open_rss_feeds(
 # ---------------------------------------------------------------------------
 
 
-def fetch_hackernews_top(limit: int = 30) -> List[NewsItem]:
+def fetch_hackernews_top(
+    limit: int = 30,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """Hacker News Firebase API (no key)."""
     items: List[NewsItem] = []
     try:
@@ -95,10 +105,15 @@ def fetch_hackernews_top(limit: int = 30) -> List[NewsItem]:
                 )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_reddit_json(subreddit: str = "news", limit: int = 25) -> List[NewsItem]:
+def fetch_reddit_json(
+    subreddit: str = "news",
+    limit: int = 25,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """Reddit public JSON endpoint (no key)."""
     url = f"https://www.reddit.com/r/{subreddit}/hot.json"
     items: List[NewsItem] = []
@@ -120,10 +135,15 @@ def fetch_reddit_json(subreddit: str = "news", limit: int = 25) -> List[NewsItem
             )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_gdelt_articles(query: str = "economy", limit: int = 25) -> List[NewsItem]:
+def fetch_gdelt_articles(
+    query: str = "economy",
+    limit: int = 25,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """GDELT Doc API (no key)."""
     url = "https://api.gdeltproject.org/api/v2/doc/doc"
     params = {
@@ -151,42 +171,77 @@ def fetch_gdelt_articles(query: str = "economy", limit: int = 25) -> List[NewsIt
             )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_offstream_events() -> List[NewsItem]:
-    """Offstream (Wikipedia Current Events) JSON API (no key)."""
+def fetch_offstream_events(*, fetch_full_text: bool = True) -> List[NewsItem]:
+    """Fetch Offstream current-events JSON while the HTTP client is still open.
+
+    A failed daily document is logged and skipped; a failed index is logged and
+    returns an empty list. HTTP status codes are checked instead of accepting
+    error pages as JSON.
+    """
     items: List[NewsItem] = []
     try:
-        with httpx.Client(timeout=20.0) as client:
-            data = client.get("https://offstream.news/index.json").json()
-        # index is a list of recent days; fetch each day's list
-        for day in (data if isinstance(data, list) else data.get("items", []))[:5]:
-            link = day.get("url") or day.get("link")
-            if not link:
-                continue
-            try:
-                ddata = client.get(link.replace(".html", ".json") if link.endswith(".html") else link).json()
-            except Exception:
-                continue
-            for ev in ddata.get("items", []) if isinstance(ddata, dict) else []:
-                items.append(
-                    NewsItem(
-                        source="offstream",
-                        title=ev.get("title", ""),
-                        text=strip_html(ev.get("description", "")),
-                        url=ev.get("url", ""),
-                        published_at=normalize_date(ev.get("date")),
-                        tags=["wikipedia_current_events"],
-                        raw=ev,
+        with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+            index_response = client.get("https://offstream.news/index.json")
+            index_response.raise_for_status()
+            data = index_response.json()
+            days = data if isinstance(data, list) else data.get("items", [])
+
+            # IMPORTANT: every request in the loop is inside this `with` block.
+            for day in (days or [])[:5]:
+                if not isinstance(day, dict):
+                    logger.warning("Skipping malformed Offstream day record: %r", day)
+                    continue
+                link = day.get("url") or day.get("link")
+                if not link:
+                    logger.warning("Skipping Offstream day without url/link: %r", day)
+                    continue
+                json_url = link[:-5] + ".json" if link.endswith(".html") else link
+                try:
+                    response = client.get(json_url)
+                    response.raise_for_status()
+                    ddata = response.json()
+                except Exception as exc:
+                    logger.warning("Offstream day request failed for %s: %s", json_url, exc)
+                    continue
+
+                events = ddata.get("items", []) if isinstance(ddata, dict) else []
+                if not isinstance(events, list):
+                    logger.warning("Unexpected Offstream items payload for %s", json_url)
+                    continue
+                for ev in events:
+                    if not isinstance(ev, dict):
+                        continue
+                    description = (
+                        ev.get("text")
+                        or ev.get("content")
+                        or ev.get("description")
+                        or ev.get("body")
+                        or ""
                     )
-                )
-    except Exception:
-        pass
-    return items
+                    items.append(
+                        NewsItem(
+                            source="offstream",
+                            title=str(ev.get("title", "") or ""),
+                            text=strip_html(description),
+                            url=str(ev.get("url", "") or ""),
+                            published_at=normalize_date(ev.get("date")),
+                            tags=["wikipedia_current_events"],
+                            raw=ev,
+                        )
+                    )
+    except Exception as exc:
+        logger.exception("Could not fetch Offstream index/events: %s", exc)
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_newsline_stories(limit: int = 60) -> List[NewsItem]:
+def fetch_newsline_stories(
+    limit: int = 60,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """Newsline API (no key)."""
     items: List[NewsItem] = []
     try:
@@ -206,10 +261,15 @@ def fetch_newsline_stories(limit: int = 60) -> List[NewsItem]:
             )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_unbiased_headlines(limit: int = 20, category: Optional[str] = None) -> List[NewsItem]:
+def fetch_unbiased_headlines(
+    limit: int = 20,
+    category: Optional[str] = None,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """Unbiased Headlines public API (no key)."""
     items: List[NewsItem] = []
     params: Dict[str, Any] = {"limit": limit}
@@ -232,10 +292,14 @@ def fetch_unbiased_headlines(limit: int = 20, category: Optional[str] = None) ->
             )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_ursy_news(limit: int = 20) -> List[NewsItem]:
+def fetch_ursy_news(
+    limit: int = 20,
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """URSY.news API (no key)."""
     items: List[NewsItem] = []
     try:
@@ -255,14 +319,20 @@ def fetch_ursy_news(limit: int = 20) -> List[NewsItem]:
             )
     except Exception:
         pass
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_google_news_rss_autonomous(query: str, lang: str = "en", country: str = "US") -> List[NewsItem]:
+def fetch_google_news_rss_autonomous(
+    query: str,
+    lang: str = "en",
+    country: str = "US",
+    *,
+    fetch_full_text: bool = True,
+) -> List[NewsItem]:
     """Google News RSS (no key)."""
     from .rss import fetch_google_news_rss
 
-    return fetch_google_news_rss(query, lang=lang, country=country)
+    return fetch_google_news_rss(query, lang=lang, country=country, fetch_full_text=fetch_full_text)
 
 
 def fetch_autonomous_all(
@@ -275,21 +345,22 @@ def fetch_autonomous_all(
     """Aggregate all autonomous (no-key) sources into one variable."""
     items: List[NewsItem] = []
     if include_rss:
-        items.extend(fetch_open_rss_feeds(rss_feeds))
+        items.extend(fetch_open_rss_feeds(rss_feeds, fetch_full_text=False))
         for q in (google_queries or []):
-            items.extend(fetch_google_news_rss_autonomous(q))
+            items.extend(fetch_google_news_rss_autonomous(q, fetch_full_text=False))
     if include_apis:
-        items.extend(fetch_hackernews_top())
-        items.extend(fetch_reddit_json("news"))
-        items.extend(fetch_reddit_json("worldnews"))
-        items.extend(fetch_gdelt_articles(gdelt_query))
-        items.extend(fetch_newsline_stories())
-        items.extend(fetch_unbiased_headlines())
+        items.extend(fetch_hackernews_top(fetch_full_text=False))
+        items.extend(fetch_reddit_json("news", fetch_full_text=False))
+        items.extend(fetch_reddit_json("worldnews", fetch_full_text=False))
+        items.extend(fetch_gdelt_articles(gdelt_query, fetch_full_text=False))
+        items.extend(fetch_offstream_events(fetch_full_text=False))
+        items.extend(fetch_newsline_stories(fetch_full_text=False))
+        items.extend(fetch_unbiased_headlines(fetch_full_text=False))
         try:
-            items.extend(fetch_ursy_news())
+            items.extend(fetch_ursy_news(fetch_full_text=False))
         except Exception:
             pass
     # dedup
     from .normalize import deduplicate
 
-    return deduplicate(items)
+    return deduplicate(enrich_news_items(items))

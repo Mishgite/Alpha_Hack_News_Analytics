@@ -1,12 +1,14 @@
 """alfa_news_parser: unified news/market parser library."""
 
 from .aggregator import NewsAggregator
+from .article import detect_language, extract_article_text, enrich_news_items, fetch_article_text
 from .autonomous import (
     OPEN_RSS_FEEDS,
     fetch_autonomous_all,
     fetch_gdelt_articles,
     fetch_hackernews_top,
     fetch_newsline_stories,
+    fetch_offstream_events,
     fetch_open_rss_feeds,
     fetch_reddit_json,
     fetch_unbiased_headlines,
@@ -36,6 +38,11 @@ from .sources import (
 
 __all__ = [
     "NewsAggregator",
+    "detect_language",
+    "extract_article_text",
+    "enrich_news_items",
+    "fetch_article_text",
+    "fetch_offstream_events",
     "NewsItem",
     "MarketQuote",
     "fetch_rss_feed",

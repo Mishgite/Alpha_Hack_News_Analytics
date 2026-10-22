@@ -2,6 +2,7 @@ pyproject.toml
 parser/__init__.py
 parser/aggregator.py
 parser/api.py
+parser/article.py
 parser/models.py
 parser/moex.py
 parser/normalize.py

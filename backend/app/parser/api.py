@@ -8,6 +8,7 @@ import httpx
 
 from .models import MarketQuote, NewsItem
 from .normalize import normalize_date
+from .article import enrich_news_items
 
 
 def _require_key(api_key: Optional[str], name: str) -> str:
@@ -21,6 +22,7 @@ def fetch_currents_news(
     language: str = "ru",
     keywords: Optional[str] = None,
     limit: int = 50,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "Currents API")
     params: Dict[str, Any] = {"apiKey": key, "language": language}
@@ -44,7 +46,7 @@ def fetch_currents_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_newsdata_news(
@@ -52,6 +54,7 @@ def fetch_newsdata_news(
     language: str = "ru",
     category: Optional[str] = None,
     limit: int = 50,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "NewsData.io")
     params: Dict[str, Any] = {"apikey": key, "language": language}
@@ -75,7 +78,7 @@ def fetch_newsdata_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_gnews_news(
@@ -83,6 +86,7 @@ def fetch_gnews_news(
     lang: str = "ru",
     query: Optional[str] = None,
     limit: int = 10,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "GNews")
     if query:
@@ -108,13 +112,14 @@ def fetch_gnews_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_guardian_news(
     api_key: Optional[str] = None,
     query: str = "economy",
     page_size: int = 20,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "The Guardian")
     url = "https://content.guardianapis.com/search"
@@ -137,13 +142,14 @@ def fetch_guardian_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_marketaux_news(
     api_key: Optional[str] = None,
     symbols: Optional[str] = None,
     limit: int = 10,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "Marketaux")
     url = "https://api.marketaux.com/v1/news/all"
@@ -167,13 +173,14 @@ def fetch_marketaux_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_alphavantage_news(
     api_key: Optional[str] = None,
     tickers: Optional[str] = None,
     limit: int = 50,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "Alpha Vantage")
     url = "https://www.alphavantage.co/query"
@@ -197,12 +204,13 @@ def fetch_alphavantage_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_finnhub_news(
     api_key: Optional[str] = None,
     category: str = "general",
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     key = _require_key(api_key, "Finnhub")
     url = "https://finnhub.io/api/v1/news"
@@ -224,7 +232,7 @@ def fetch_finnhub_news(
                 raw=art,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
 def fetch_fred_series(

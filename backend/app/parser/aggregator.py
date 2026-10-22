@@ -16,6 +16,7 @@ from .api import (
 from .models import MarketQuote, NewsItem
 from .moex import fetch_moex_top_movers, fetch_moex_securities
 from .normalize import deduplicate
+from .article import enrich_news_items
 from .rss import (
     fetch_cbr_news,
     fetch_google_news_rss,
@@ -68,12 +69,12 @@ class NewsAggregator:
 
         if include_rss:
             try:
-                items.extend(fetch_cbr_news())
+                items.extend(fetch_cbr_news(fetch_full_text=False))
             except Exception:
                 pass
             for q in (google_queries or []):
                 try:
-                    items.extend(fetch_google_news_rss(q))
+                    items.extend(fetch_google_news_rss(q, fetch_full_text=False))
                 except Exception:
                     pass
 
@@ -92,10 +93,13 @@ class NewsAggregator:
                 if not api_key:
                     continue
                 try:
-                    items.extend(fn(api_key=api_key)[:limit_per_source])
+                    items.extend(fn(api_key=api_key, fetch_full_text=False)[:limit_per_source])
                 except Exception:
                     continue
 
+        # Retrieve original article bodies in one parallel batch instead of waiting
+        # serially for every API/RSS adapter to finish extracting its articles.
+        items = enrich_news_items(items)
         if dedup:
             items = deduplicate(items)
         return items

@@ -9,6 +9,7 @@ import httpx
 
 from .models import NewsItem
 from .normalize import normalize_date, strip_html
+from .article import enrich_news_items
 
 
 def fetch_rss_feed(
@@ -16,6 +17,7 @@ def fetch_rss_feed(
     source: str,
     tags: Optional[List[str]] = None,
     timeout: float = 20.0,
+    fetch_full_text: bool = True,
 ) -> List[NewsItem]:
     """Fetch and normalize a generic RSS/Atom feed into a list of NewsItem."""
     tags = tags or []
@@ -64,31 +66,31 @@ def fetch_rss_feed(
                 raw=dict(entry) if isinstance(entry, dict) else None,
             )
         )
-    return items
+    return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_cbr_news() -> List[NewsItem]:
+def fetch_cbr_news(*, fetch_full_text: bool = True) -> List[NewsItem]:
     """Bank of Russia RSS (official)."""
-    return fetch_rss_feed("https://www.cbr.ru/rss/RssPress", source="cbr", tags=["macro", "regulation"])
+    return fetch_rss_feed("https://www.cbr.ru/rss/RssPress", source="cbr", tags=["macro", "regulation"], fetch_full_text=fetch_full_text)
 
 
-def fetch_vedomosti_rss(url: str, category: str = "all") -> List[NewsItem]:
+def fetch_vedomosti_rss(url: str, category: str = "all", *, fetch_full_text: bool = True) -> List[NewsItem]:
     """Vedomosti RSS (category URLs from the official RSS catalog)."""
-    return fetch_rss_feed(url, source="vedomosti", tags=[category])
+    return fetch_rss_feed(url, source="vedomosti", tags=[category], fetch_full_text=fetch_full_text)
 
 
-def fetch_tass_rss(url: str) -> List[NewsItem]:
+def fetch_tass_rss(url: str, *, fetch_full_text: bool = True) -> List[NewsItem]:
     """TASS public RSS."""
-    return fetch_rss_feed(url, source="tass")
+    return fetch_rss_feed(url, source="tass", fetch_full_text=fetch_full_text)
 
 
-def fetch_google_news_rss(query: str, lang: str = "ru", country: str = "RU") -> List[NewsItem]:
+def fetch_google_news_rss(query: str, lang: str = "ru", country: str = "RU", *, fetch_full_text: bool = True) -> List[NewsItem]:
     """Google News RSS search by keyword."""
     url = (
         f"https://news.google.com/rss/search?q={query.replace(' ', '+')}"
         f"&hl={lang}&gl={country}&ceid={country}:{lang}"
     )
-    return fetch_rss_feed(url, source="google_news", tags=[query])
+    return fetch_rss_feed(url, source="google_news", tags=[query], fetch_full_text=fetch_full_text)
 
 
 CBR_FX_URL = "https://www.cbr.ru/scripts/XML_daily.asp"
