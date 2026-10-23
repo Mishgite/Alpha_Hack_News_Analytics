@@ -22,3 +22,6 @@ htmlcov/
 node_modules/
 dist/
 
+# Local tagging locks and migration backups
+backend/app/bad_news.json.lock
+backend/app/*.json.bak
