@@ -243,12 +243,69 @@ class NewsRepository:
             .on_conflict_do_nothing(index_elements=["id"])
         )
 
+    def sync_tag_catalog(self, topics: dict[str, str]) -> int:
+        """добавляет темы и обновляет названия, не удаляет теги и не включает отключённые"""
+        if not topics:
+            return 0
+        statement = insert(Tag).values(
+            [
+                {"id": code, "display_name": name, "category": "business"}
+                for name, code in topics.items()
+            ]
+        )
+        self._session.execute(
+            statement.on_conflict_do_update(
+                index_elements=[Tag.id],
+                set_={
+                    "display_name": statement.excluded.display_name,
+                    "category": "business",
+                },
+            )
+        )
+        return len(topics)
+
+    def mark_tagging_failed(
+        self,
+        news_id: UUID,
+        *,
+        expected_content_hash: str,
+        expected_published_at: datetime,
+    ) -> bool:
+        """отмечает ошибку только для той версии новости, которая была передана разметчику"""
+        row = self._session.scalar(
+            select(News).where(News.id == news_id).with_for_update()
+        )
+        if row is None:
+            raise LookupError("News not found")
+        if (
+            row.content_hash != expected_content_hash
+            or row.published_at != expected_published_at
+            or row.tagging_status != "pending_tagging"
+        ):
+            return False
+        row.tagging_status = "failed"
+        self._session.flush()
+        return True
+
+    def retry_tagging(self, news_id: UUID) -> StoredNews:
+        """возвращает неудачную разметку в очередь, готовые новости не меняет"""
+        row = self._session.scalar(
+            select(News).where(News.id == news_id).with_for_update()
+        )
+        if row is None:
+            raise LookupError("News not found")
+        if row.tagging_status == "failed":
+            row.tagging_status = "pending_tagging"
+            self._session.flush()
+        return self._dto(row)
+
     def save_features(
         self,
         features: NewsFeatures,
         *,
         version: str,
         expected_content_hash: str,
+        expected_published_at: datetime | None = None,
     ) -> StoredNews:
         """проверяет версию, активность тегов и хэш текста, затем полностью заменяет разметку
 
@@ -270,7 +327,10 @@ class NewsRepository:
         if row is None:
             raise LookupError("News not found")
         # пока разметчик работал, парсер мог обновить текст; ответ для старой версии не сохраняем
-        if row.content_hash != expected_content_hash:
+        if row.content_hash != expected_content_hash or (
+            expected_published_at is not None
+            and row.published_at != expected_published_at
+        ):
             raise ValueError("Article changed while it was being tagged")
         # полностью заменяем разметку в одной транзакции; пустой набор тоже допустим
         self._session.execute(delete(NewsTag).where(NewsTag.news_id == row.id))

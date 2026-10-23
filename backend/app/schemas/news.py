@@ -26,7 +26,7 @@ class NewsTag(BaseModel):
 class Geography(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    country_code: str | None = None
+    country_code: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
     region_codes: list[str] = Field(default_factory=list)
     # значение None означает неизвестный масштаб, False указывает, что событие не общенациональное
     nationwide: bool | None = None

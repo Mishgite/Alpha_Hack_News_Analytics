@@ -138,7 +138,7 @@ from app.schemas.news import NewsFeatures, NewsTag, Geography
 Возвращает новости без разметки, начиная с загруженных раньше
 `limit` от 1 до 500; метод только читает список, не закрепляет новости за обработчиком
 
-### `save_features(features: NewsFeatures, *, version: str, expected_content_hash: str) -> StoredNews`
+### `save_features(features: NewsFeatures, *, version: str, expected_content_hash: str, expected_published_at: datetime | None = None) -> StoredNews`
 
 Сохраняет признаки новости и устанавливает статус разметки `ready`
 
@@ -318,3 +318,60 @@ from app.schemas.insights import InsightResult, SourceReference
 Полные поля моделей: [входные данные сервисов](../app/schemas/services.py), [результаты из БД](../app/schemas/database.py), [новости](../app/schemas/news.py), [ранжирование](../app/schemas/ranking.py), [AI-разборы](../app/schemas/insights.py)
 
 У всех сервисов есть необязательный параметр конструктора `uow_factory=UnitOfWork` для замены способа открытия транзакций; при обычном использовании он не передаётся
+
+## NewsPipeline: парсер, разметка и сохранение
+
+Импорт: `from app.services import NewsPipeline`
+
+Создание: `NewsPipeline(news_service=None, tagger=None)`; параметры позволяют передать готовый `NewsService` и `NewsTagger`
+
+### `save_parsed_news(items, *, source_kind: str) -> ProcessingResult`
+
+- `items`: результаты парсера `NewsItem`; метод `to_incoming_news()` преобразует их в `IncomingNews`
+- `source_kind`: тип источника, например `rss` или `api`
+- Источники регистрируются при первом появлении; отключённые источники не включаются обратно
+- Некорректная новость не прерывает обработку остальных
+- Результат: `news_ids` сохранённых новостей и `errors` с позицией элемента и кодом ошибки
+
+### `tag_pending_news(*, limit: int = 50) -> ProcessingResult`
+
+- `limit`: размер порции, от 1 до 500
+- Получает новости без разметки, вызывает LLM, сохраняет `NewsFeatures` с проверкой исходных текста и даты
+- Ошибочная версия получает статус `failed` и не выбирается следующей порцией; новая версия текста или даты снова попадает в очередь
+- Результат: `news_ids` размеченных новостей и `errors` с ID и кодом ошибки
+- Перед первым запуском требуется синхронизация справочника через `NewsService.sync_tag_catalog()` или обычный запуск `init_db.py`
+- Порции запускаются одним обработчиком; метод не распределяет новости между несколькими одновременно работающими обработчиками
+
+Дополнительные методы `NewsService`:
+
+- `sync_tag_catalog(*, catalog_path=None) -> int`: загружает темы из группы `business` в БД и возвращает их количество; не удаляет существующие темы и не включает отключённые
+- `mark_tagging_failed(news: StoredNews) -> bool`: отмечает ошибку для неизменившейся версии новости; используется процессом разметки
+- `retry_tagging(news_id: UUID) -> StoredNews`: возвращает `failed`-новость в очередь для явной повторной попытки
+- `save_features()` дополнительно принимает `expected_published_at: datetime | None = None`; `NewsPipeline` всегда передаёт исходную дату
+
+## ProfilePipeline: разметка профилей
+
+Импорт: `from app.services import ProfilePipeline`
+
+Создание: `ProfilePipeline(profile_service=None, tagger=None)`; зависимости по умолчанию `ProfileService` и `ProfileTagger`
+
+### `tag_company(company_id: str, *, base_weight: float = 1.0) -> ProfileTags`
+
+Берёт известные признаки компании из БД и сохраняет предложенные темы
+
+- `company_id`: ID существующей компании
+- `base_weight`: вес каждой автоматической темы от 0 до 2, отдельная настройка, не уверенность модели
+- Сохраняет темы с `origin="rule"`, ручные темы остаются
+- Изменившиеся за время запроса данные компании вызывают ошибку вместо сохранения устаревшего результата
+- Географию компании из датасета не перезаписывает
+
+### `suggest_interests(user_id: UUID) -> ProfileTags`
+
+Возвращает предложения по деятельности компании и должности пользователя. Личные и отключённые темы не меняет; выбранные пользователем темы сохраняются через `ProfileService.set_interests()`
+
+Дополнительные методы `ProfileService`:
+
+- `get_company(company_id: str) -> CompanyData`: получить компанию для разметки
+- `save_company_tagging(expected: CompanyData, tags: list[CompanyTagInput]) -> None`: сохранить автоматические темы при неизменившемся профиле, сохранив ручные
+
+Схемы результатов находятся в `app.schemas.tagging`, описание разметчиков: [LLM](../app/services/ai_agents/readme.md)

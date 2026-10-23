@@ -97,6 +97,22 @@ class ProfileService:
             db.commit()
             return result
 
+    def get_company(self, company_id: str) -> CompanyData:
+        """возвращает компанию для разметки или вызывает LookupError"""
+        with self._uow() as db:
+            company = db.companies.get(company_id)
+            if company is None:
+                raise LookupError("Company not found")
+            return company
+
+    def save_company_tagging(
+        self, expected: CompanyData, tags: list[CompanyTagInput]
+    ) -> None:
+        """заменяет автоматические темы без удаления ручных, проверяет версию данных компании"""
+        with self._uow() as db:
+            db.companies.save_company_tagging(expected, tags)
+            db.commit()
+
     def set_company_tags(self, company_id: str, tags: list[CompanyTagInput]) -> None:
         """заменяет темы компании и их веса, сохраняя личные настройки пользователей"""
         with self._uow() as db:

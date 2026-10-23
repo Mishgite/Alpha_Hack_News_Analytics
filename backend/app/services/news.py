@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from app.infrastructure.database.uow import UnitOfWork
@@ -6,6 +7,7 @@ from app.schemas.news import NewsFeatures, StoredNews
 from app.schemas.services import IncomingNews
 
 from ._common import required
+from .tag_catalog import load_catalog
 
 
 class NewsService:
@@ -38,6 +40,32 @@ class NewsService:
         with self._uow() as db:
             return db.news.list_tags()
 
+    def sync_tag_catalog(self, *, catalog_path=None) -> int:
+        """загружает тематические коды справочника в БД, географию не превращает в темы"""
+        catalog = load_catalog(catalog_path)
+        with self._uow() as db:
+            count = db.news.sync_tag_catalog(catalog["business"])
+            db.commit()
+            return count
+
+    def mark_tagging_failed(self, news: StoredNews) -> bool:
+        """исключает неудачную версию новости из очереди до явного повторного запуска"""
+        with self._uow() as db:
+            changed = db.news.mark_tagging_failed(
+                news.news_id,
+                expected_content_hash=news.content_hash,
+                expected_published_at=news.published_at,
+            )
+            db.commit()
+            return changed
+
+    def retry_tagging(self, news_id: UUID) -> StoredNews:
+        """повторно ставит failed-новость в очередь разметки"""
+        with self._uow() as db:
+            news = db.news.retry_tagging(news_id)
+            db.commit()
+            return news
+
     def save_news(self, article: IncomingNews) -> StoredNews:
         """сохраняет новость от парсера и возвращает её данные в StoredNews
 
@@ -63,7 +91,12 @@ class NewsService:
             return db.news.list_pending_news(limit=limit)
 
     def save_features(
-        self, features: NewsFeatures, *, version: str, expected_content_hash: str
+        self,
+        features: NewsFeatures,
+        *,
+        version: str,
+        expected_content_hash: str,
+        expected_published_at: datetime | None = None,
     ) -> StoredNews:
         """сохраняет признаки и ставит ready, если хэш текста совпадает с expected_content_hash
 
@@ -72,7 +105,10 @@ class NewsService:
         """
         with self._uow() as db:
             result = db.news.save_features(
-                features, version=version, expected_content_hash=expected_content_hash
+                features,
+                version=version,
+                expected_content_hash=expected_content_hash,
+                expected_published_at=expected_published_at,
             )
             db.commit()
             return result

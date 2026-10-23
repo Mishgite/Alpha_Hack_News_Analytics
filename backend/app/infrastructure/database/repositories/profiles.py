@@ -124,6 +124,39 @@ class CompanyRepository:
         )
         self._session.flush()
 
+    def save_company_tagging(
+        self, expected: CompanyData, tags: list[CompanyTagInput]
+    ) -> None:
+        """сохраняет автоматические темы при неизменном профиле, оставляет ручные темы"""
+        company = self._session.scalar(
+            select(Company)
+            .where(Company.id == expected.id)
+            .with_for_update(key_share=True)
+            .execution_options(populate_existing=True)
+        )
+        if company is None:
+            raise LookupError("Company not found")
+        if CompanyData.model_validate(company) != expected:
+            raise ValueError("Company changed during tagging")
+        if any(tag.origin != "rule" for tag in tags):
+            raise ValueError("Automatic tagging requires rule origin")
+        ids = {tag.tag_id for tag in tags}
+        active = set(
+            self._session.scalars(select(Tag.id).where(Tag.id.in_(ids), Tag.active))
+        )
+        if ids != active or len(ids) != len(tags):
+            raise ValueError("Unknown, inactive or duplicate tag")
+        self._session.execute(
+            delete(CompanyTag).where(
+                CompanyTag.company_id == expected.id,
+                CompanyTag.origin == "rule",
+            )
+        )
+        self._session.add_all(
+            [CompanyTag(company_id=expected.id, **tag.model_dump()) for tag in tags]
+        )
+        self._session.flush()
+
     def get_context_evidence(self, company_id: str) -> dict:
         """возвращает источники признаков, связи и темы компании для AI
 
