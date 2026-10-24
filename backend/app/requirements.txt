@@ -10,3 +10,5 @@ beautifulsoup4==4.15.0
 trafilatura==2.3.1
 langdetect==1.0.9
 filelock==3.20.0
+fastapi==0.162.0
+uvicorn==0.54.0
