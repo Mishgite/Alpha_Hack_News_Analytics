@@ -175,16 +175,12 @@ function inlineError(form, e) {
 function skeleton() {
   return `<div class="loading-block" aria-busy="true"><div class="loading-label" role="status"><span class="spinner"></span>Подготавливаем подборку</div>${[0, 1, 2].map(() => '<div class="skeleton-card"><span class="skeleton short"></span><span class="skeleton long"></span><span class="skeleton"></span><span class="skeleton medium"></span></div>').join("")}</div>`;
 }
-function context() {
-  const c = state.profile.company;
-  return `<section class="company-context" aria-label="Текущая компания"><div class="context-company"><span class="company-monogram">${icon("people")}</span><div><strong class="company-name">${esc(c.industry || c.id)}</strong><p>${[c.id, c.city].filter(Boolean).map(esc).join(" · ")}</p></div></div><div class="context-actions"><div><button data-action="company-info">О компании ${icon("arrow")}</button></div></div></section>`;
-}
 function heading(title, subtitle) {
   return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div></div>`;
 }
 async function home() {
   const token = generation;
-  main.innerHTML = heading("Главная", [state.profile.company.industry || state.profile.company.id, state.profile.company.city].filter(Boolean).map(esc).join(" · ")) + `
+  main.innerHTML = heading("Главная", "Сервисы для вашего бизнеса") + `
     <section class="bank-overview" aria-label="Банковские сервисы">
       <div class="bank-preview"><span class="overview-icon">${icon("wallet")}</span><div><h2>Счета</h2><p>Остатки и реквизиты</p></div></div>
       <div class="bank-preview"><span class="overview-icon">${icon("card")}</span><div><h2>Платежи</h2><p>Переводы и история операций</p></div></div>
@@ -222,7 +218,7 @@ function roleOptions(selected) {
     .join("");
 }
 async function demoSetup() {
-  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><span class="eyebrow">Демонстрация</span><h1>Компания и должность</h1></div><form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Применить</button></form><section class="form-card"><h2>Компания</h2><p class="field-hint">Выбрана ${esc(state.profile.company.id)}</p><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button></div>`;
+  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><span class="eyebrow">Демонстрация</span><h1>Компания и должность</h1></div><form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Применить</button></form><section class="form-card"><h2>Компания</h2><p>${esc(state.profile.company.industry || state.profile.company.id)}</p><p class="field-hint">${[state.profile.company.id, state.profile.company.city].filter(Boolean).map(esc).join(" · ")}</p><button class="text-button" data-action="company-info">О компании ${icon("arrow")}</button><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button></div>`;
   theme();
   await loadCompanies("");
 }
@@ -277,7 +273,6 @@ async function feed(reuse = false) {
       "Бизнес-инсайты",
       "Новости, которые стоит проверить в контексте вашей компании",
     ) +
-    context() +
     `<div class="feed-toolbar"><div><h2>Новости для вас</h2></div><div class="toolbar-actions"><label class="period-label">Период<select id="period" aria-label="Период новостей">${[
       [1, "За сутки"],
       [7, "За 7 дней"],
@@ -788,7 +783,6 @@ async function market() {
       "Биржевой обзор",
       "Котировки и изменения цен",
     ) +
-    context() +
     '<div id="market-content">' +
     skeleton() +
     "</div>";
