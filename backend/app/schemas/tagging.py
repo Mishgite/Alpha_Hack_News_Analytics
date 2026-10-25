@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .news import Geography, NewsTag
+from .news import BusinessContext, Geography, NewsTag
 
 
 class ProfileForTagging(BaseModel):
@@ -23,7 +23,7 @@ class ProfileTags(BaseModel):
     geography: Geography
 
 
-class NewsTaggingOutput(BaseModel):
+class NewsTaggingOutput(BusinessContext):
     """проверяет ответ модели без идентификатора новости, который задаёт приложение"""
 
     model_config = ConfigDict(extra="forbid")

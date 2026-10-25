@@ -50,11 +50,15 @@ class QuestionService:
         history = await asyncio.to_thread(
             self.insights.get_history, user_id, analysis_id, conversation_id, limit=5
         )
+        context = await asyncio.to_thread(
+            self.insights.get_analysis_context, user_id, analysis_id
+        )
         await asyncio.to_thread(self.reserve, user_id)
         try:
             try:
                 answer, sources = await asyncio.wait_for(
-                    self.agent.answer(analysis, history, question), timeout=250
+                    self.agent.answer(analysis, history, question, context=context),
+                    timeout=250,
                 )
             except ValueError:
                 raise RuntimeError("Model answer could not be verified") from None

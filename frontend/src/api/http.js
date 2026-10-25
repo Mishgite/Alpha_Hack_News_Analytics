@@ -1,26 +1,29 @@
-const messages = {
-  401: "Сессия завершена. Войдите снова",
-  403: "Нет доступа к этим данным или демовход отключён на сервере",
-  404: "Данные не найдены",
-  409: "Данные изменились. Обновите страницу и повторите действие",
-  429: "Слишком много запросов. Повторите позже",
-  500: "Внутренняя ошибка сервера",
-  502: "Сервер временно недоступен",
-  503: "Сервис временно недоступен. Попробуйте позже",
-  504: "Сервер не успел ответить. Повторите позже",
-};
+import { messages, UserError } from "./errors.js";
+
 const details = {
-  "Analysis worker unavailable":
-    "AI-разбор сейчас недоступен: обработчик не запущен или модель не настроена",
-  "Database unavailable": "Нет соединения с базой данных",
-  "Source PDF is not available": "Исходный PDF отсутствует на сервере",
-  "Snapshot expired": "Срок подборки истёк. Обновите ленту",
+  "Analysis worker unavailable": "Разбор временно недоступен. Попробуйте позже",
+  "Database unavailable": "Не удалось загрузить данные. Попробуйте позже",
+  "Source PDF is not available": "Документ недоступен. Остальные источники можно открыть в разборе",
+  "Source PDF could not be read": "Не удалось открыть документ. Попробуйте позже",
+  "Source PDF differs from the cited version": "Документ обновлён и отличается от использованного в разборе",
+  "Snapshot expired": "Подборка устарела. Обновите ленту",
+};
+const fields = {
+  city: "город проживания",
+  company_id: "компания",
+  job_role: "роль",
+  question: "вопрос",
+  personal: "личные интересы",
+  disabled: "отключённые темы",
+  wrong_tag_ids: "неверные темы",
+  suggested_tag_ids: "предложенные темы",
+  days: "период новостей",
 };
 
-export class ApiError extends Error {
-  constructor(message, status = 0) {
-    super(message);
-    this.status = status;
+export class ApiError extends UserError {
+  constructor(message, status = 0, diagnostic = null) {
+    super(message, status);
+    this.diagnostic = diagnostic;
   }
 }
 
@@ -52,16 +55,17 @@ export function createHttpClient({ baseUrl, storage, fetcher = fetch }) {
   async function request(method, path, body, options = {}) {
     if (!base)
       throw new ApiError(
-        "Адрес API не настроен. Укажите VITE_API_URL при сборке",
+        "Приложение пока недоступно. Попробуйте позже", 0, "VITE_API_URL is missing",
       );
     if (!path.startsWith("/api/") && path !== "/health")
-      throw new ApiError("Недопустимый путь API");
+      throw new ApiError("Не удалось выполнить действие", 0, "Invalid API path");
     const headers = {
       Accept: path.endsWith("/document")
         ? "application/pdf"
         : "application/json",
     };
-    if (hasSession()) headers.Authorization = `Bearer ${session.access_token}`;
+    const requestToken = hasSession() ? session.access_token : null;
+    if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
     if (body !== undefined) headers["Content-Type"] = "application/json";
     const controller = new AbortController();
     const timer = setTimeout(
@@ -84,37 +88,42 @@ export function createHttpClient({ baseUrl, storage, fetcher = fetch }) {
         try {
           payload = await response.json();
         } catch {}
-        if (response.status === 401) save(null);
-        let message = details[payload?.detail] || messages[response.status];
+        if (response.status === 401 && session?.access_token === requestToken) save(null);
+        let message = typeof payload?.detail === "string" && Object.hasOwn(details, payload.detail)
+          ? details[payload.detail]
+          : messages[response.status];
         if (response.status === 422 && Array.isArray(payload?.detail)) {
-          message =
-            "Проверьте поля: " +
-            payload.detail
-              .map((item) => item.loc?.slice(1).join(".") || "запрос")
-              .join(", ");
+          const names = [...new Set(payload.detail.flatMap((item) =>
+            Array.isArray(item?.loc) ? item.loc.filter((key) => Object.hasOwn(fields, key)).map((key) => fields[key]) : [],
+          ))];
+          message = names.length ? "Проверьте поля: " + names.join(", ") : messages[422];
         }
-        if (!message && typeof payload?.detail === "string")
-          message = payload.detail;
         throw new ApiError(
-          message || "Не удалось выполнить запрос",
+          message || "Не удалось выполнить действие. Попробуйте ещё раз",
           response.status,
+          payload?.detail ?? null,
         );
       }
       if (response.status === 204) {
-        if (path === "/api/auth/logout") save(null);
+        if (path === "/api/auth/logout" && session?.access_token === requestToken) save(null);
         return null;
       }
       if (path.endsWith("/document")) {
         if (!response.headers.get("content-type")?.includes("application/pdf"))
-          throw new ApiError("Сервер вернул файл неизвестного формата");
+          throw new ApiError("Не удалось открыть документ. Попробуйте позже");
         return await response.blob();
       }
       if (!response.headers.get("content-type")?.includes("application/json"))
-        throw new ApiError("Сервер вернул некорректный ответ");
-      const data = await response.json();
+        throw new ApiError("Не удалось загрузить данные. Попробуйте ещё раз");
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        throw new ApiError("Не удалось загрузить данные. Попробуйте ещё раз", 0, error);
+      }
       if (path === "/api/auth/demo") {
-        if (!data.access_token || !Number.isFinite(Date.parse(data.expires_at)))
-          throw new ApiError("Некорректная сессия в ответе сервера");
+        if (!data?.access_token || !Number.isFinite(Date.parse(data.expires_at)))
+          throw new ApiError("Не удалось войти. Попробуйте ещё раз");
         save(data);
       }
       return data;
@@ -122,11 +131,18 @@ export function createHttpClient({ baseUrl, storage, fetcher = fetch }) {
       if (error instanceof ApiError) throw error;
       if (controller.signal.aborted)
         throw new ApiError(
-          "Время ожидания истекло. Сервер мог принять запрос; повторите проверку состояния",
+          path.endsWith("/analysis")
+            ? "Разбор занимает больше времени, чем обычно. Проверьте его позже"
+            : path.endsWith("/questions")
+              ? "Ответ пока не получен. Проверьте историю вопросов позже"
+              : messages[504],
           504,
+          error,
         );
       throw new ApiError(
-        "Нет соединения с API. Проверьте подключение, адрес сервера и настройки CORS",
+        "Не удалось подключиться. Проверьте интернет и попробуйте ещё раз",
+        0,
+        error,
       );
     } finally {
       clearTimeout(timer);

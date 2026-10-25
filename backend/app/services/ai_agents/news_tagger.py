@@ -6,6 +6,7 @@ from app.services.tag_catalog import load_catalog
 
 from ._common import (
     model_object,
+    normalize_city_codes,
     settings,
     validate_configuration,
     validate_features,
@@ -16,7 +17,7 @@ from .bad_news import load_bad_news
 class NewsTagger:
     """возвращает NewsFeatures, не открывает БД и не меняет исходную новость"""
 
-    version = "news-features-v2:modality-v1"
+    version = "news-features-v4:business-context-v1"
 
     def __init__(self, *, catalog_path=None, bad_news_path=None, transport=None):
         """сохраняет справочник и транспорт для обращения к модели"""
@@ -43,6 +44,14 @@ class NewsTagger:
         output = model_object(
             "LLM_MODEL_TAGGING",
             "Выдели темы, тип события, экономические факторы, отрасли и краткое изложение фактов. "
+            "business_scope: general для общих правил и рыночных условий, industry для "
+            "изменений условий отрасли, local для местной инфраструктуры и мер, organization "
+            "для события отдельной организации без подтверждённых последствий для отрасли, "
+            "unknown при нехватке данных. business_relevance оценивает деловую значимость: "
+            "0.9–1 обязательные правила и крупные изменения условий, 0.7–0.85 конкретные "
+            "возможности и риски, 0.4–0.65 отраслевые кейсы и проекты, 0.1–0.35 бытовые "
+            "события и слабые сигналы, 0 без деловой связи. Не завышай оценку планов, "
+            "церемоний и школьных мероприятий, не придумывай последствия. "
             "industries содержит коды из business, только когда обозначена отрасль события. "
             "Неизвестные признаки оставляй пустыми. Для общенационального события укажи "
             "nationwide=true, не перечисляй все регионы. incorrect_examples содержит "
@@ -64,6 +73,7 @@ class NewsTagger:
             NewsTaggingOutput,
             self.transport,
         )
+        normalize_city_codes(output, self.catalog)
         validate_features(output, self.catalog)
         if set(output.industries) - set(self.catalog["business"].values()):
             raise ValueError("Unknown industry code")

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "verified_on": "2026-10-25",
-  "description": "100 реальных публикаций за 19–25 октября 2026 года с краткими пересказами и ссылками. Первые 7 записей сохраняют прежнюю разметку модели хакатона и отметки проверки. Еще 93 пересказа и их признаки подготовлены ассистентом по текстам публикаций или RSS без вызовов API модели хакатона. Основание указано в review_basis. Это примеры для проверки приложения, не экспертные оценки релевантности для обучения",
-  "timestamp_policy": "У первых 7 записей published_precision=day: 00:00+03:00 является техническим временем для известного календарного дня. У остальных published_precision=rss_timestamp: сохранена дата и время из RSS источника без обновления при импорте. Дата события может отличаться от даты публикации",
+  "description": "104 реальные публикации за 19–25 октября 2026 года с пересказами и ссылками. Исходные 100 примеров дополнены четырьмя деловыми публикациями. Масштаб и деловая значимость исходных новостей размечены моделью хакатона с проверкой ассистентом; четыре дополнения размечены ассистентом. Это демонстрационные материалы, не экспертные метки для обучения рекомендаций",
+  "timestamp_policy": "published_precision=day означает техническое время 00:00+03:00 при известном календарном дне публикации. published_precision=rss_timestamp означает исходную дату и время RSS. Импорт не обновляет дату публикации",
   "items": [
     {
       "region": "Новосибирская область",
@@ -22,6 +22,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_agr",
@@ -60,14 +62,16 @@
           "region_codes": [
             "reg_54"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Новосибирской области министр сельского хозяйства представил меры поддержки АПК: 2,45 млрд рублей субсидий и 14 инвестиционных проектов на 55 млрд рублей с планом создания 1,5 тыс. рабочих мест. Отмечен экспорт продукции в 22 страны и площадь посевов масличных культур — 657 тыс. га."
       },
       "content_hash": "2e7e3418672ad2f74267b1fd234a210814f4ee68554bf24389d52b041a63c59f",
       "features_published_at": "2026-10-22T00:00:00+03:00",
-      "tagging_version": "news-features-v2",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_version": "news-features-v2:business-context-v1",
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -87,6 +91,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_ai",
@@ -126,14 +132,16 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Казани готовится форум Kazan Digital Week с акцентом на ИИ и интеллектуальные транспортные системы. В Татарстане функционируют около 30 производителей беспилотных авиасистем, на центры испытаний и компетенций в 2026 году выделено более 2 млрд рублей, включая свыше 1,5 млрд из федерального бюджета."
       },
       "content_hash": "99601548a5a33c3cee905dec5a2853e5273f9392152758cf3c8f0a31ecdca4ce",
       "features_published_at": "2026-10-24T00:00:00+03:00",
-      "tagging_version": "news-features-v2",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_version": "news-features-v2:business-context-v1",
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Свердловская область",
@@ -152,6 +160,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_dairy",
@@ -189,14 +199,16 @@
           "region_codes": [
             "reg_66"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Свердловская область представит продукцию молочных заводов и фермеров на XIV Межрегиональной агропромышленной выставке УрФО в Екатеринбурге. В рамках мероприятия пройдет конференция по развитию молочного кластера Урала, где будут обсуждаться задачи развития производства, продаж и логистики."
       },
       "content_hash": "a271a81d2a2ea67359d03a32f707f8213272e862ed6477ca7849ca7325ff3f8f",
       "features_published_at": "2026-10-23T00:00:00+03:00",
-      "tagging_version": "news-features-v2",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_version": "news-features-v2:business-context-v1",
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -216,6 +228,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_investment",
@@ -253,15 +267,17 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Белоглинский район Краснодарского края предлагает государственный участок в селе Белая Глина для кормового производства. Возможны аренда или покупка. В инвестиционном предложении указаны доступные подключения к электричеству, газу и воде; строительство завода и подключение сетей не объявлены завершёнными."
       },
       "content_hash": "ae805831e40c89ccf172d605ca7637bc737e02faacd6e09f40c97c60d6edd730",
       "features_published_at": "2026-10-23T00:00:00+03:00",
-      "tagging_version": "news-features-v2:summary-reviewed-v1",
+      "tagging_version": "news-features-v2:summary-reviewed-v1:business-context-v1",
       "summary_review": "Краткое изложение вручную сверено с исходной публикацией; сохранена модальность планов и доступных возможностей. Теги не изменялись",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -281,6 +297,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_port",
@@ -311,14 +329,16 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Росморпорт планирует начать дноуглубительные работы в порту Корсаков (Сахалинская область) для расширения грузоперевозок и создания логистического технопарка. Работы по углублению канала до 11,4 метра позволят принимать суда с осадкой до 9 метров. Разрешения получены, старт зависит от погоды."
       },
       "content_hash": "05dae851a2af96a11f53fef004d2984f1d3cc46860648530769d1d5107f817c1",
       "features_published_at": "2026-10-23T00:00:00+03:00",
-      "tagging_version": "news-features-v2",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_version": "news-features-v2:business-context-v1",
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -338,6 +358,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_realty",
@@ -368,15 +390,17 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "КОРТРОС готовит проект четырёхзвёздочной гостиницы на 200 номеров на острове Октябрьском в Калининграде. Завершение строительства намечено на июнь 2030 года. Предполагается участие «Васта Отель Менеджмент» и дальнейшее управление под брендом «Эрбелия от Васта»."
       },
       "content_hash": "ef61afda2de4002d2bedfd68a1fccbcb688cb9ed173d6c4036d2aff27c28aef8",
       "features_published_at": "2026-10-23T00:00:00+03:00",
-      "tagging_version": "news-features-v2:summary-reviewed-v1",
+      "tagging_version": "news-features-v2:summary-reviewed-v1:business-context-v1",
       "summary_review": "Краткое изложение вручную сверено с исходной публикацией; сохранена модальность планов и доступных возможностей. Теги не изменялись",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -396,6 +420,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_nuclear",
@@ -425,14 +451,16 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Десногорске начались поставки модулей трансформаторной подстанции для строительной базы Смоленской АЭС-2. Оборудование заменит временную дизельную генерацию, а на 2026–2027 годы контрактация охватит 38 лотов на поставку более 5 тысяч единиц техники."
       },
       "content_hash": "40bf6ffe30d9fc7db07b26e5e3de14c514644ce8d8ef32710b30e4494412ef30",
       "features_published_at": "2026-10-23T00:00:00+03:00",
-      "tagging_version": "news-features-v2",
-      "tagging_model": "qwen/qwen3.6-35b-a3b"
+      "tagging_version": "news-features-v2:business-context-v1",
+      "tagging_model": "qwen/qwen3.6-35b-a3b",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -455,6 +483,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_roads",
@@ -479,13 +509,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Казани проверили подготовку дорожных предприятий к зимней уборке: выпуск техники, маршруты и работу диспетчерских систем. По сообщению мэрии, задержек при выпуске машин не было, но оформление документов в нескольких системах потребовало доработки."
       },
       "content_hash": "94e424edf28c83e47f8b4858c4f5e90601cd2753b0fa7a475785f17f9da999a1",
       "features_published_at": "2026-10-24T17:25:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -508,6 +540,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_auto",
@@ -532,13 +566,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "КАМАЗ сообщил о намерении увеличить экспорт грузовиков в Африку в 2027 году. Компания выделяет Центральную и Западную Африку как направления расширения; новые контракты на предстоящем саммите пока не планируются."
       },
       "content_hash": "739a6ed48fe64c99d096f9a88de2a62fd792b6af47ee331c7ad21dbe2bd7d3fb",
       "features_published_at": "2026-10-24T11:16:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -561,6 +597,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_health",
@@ -585,13 +623,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Татарстане 112 руководителей государственных медучреждений прошли проверку знаний после курса повышения квалификации. Программа включала организацию лечения, управление кадрами, медицинскую статистику и закупки; результаты учтут в дальнейшем обучении."
       },
       "content_hash": "175042c7ac4ed87d2eb85692689306499504d408f5a1f895cd4d8bc424ec5ab0",
       "features_published_at": "2026-10-24T10:12:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -614,6 +654,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_digital",
@@ -634,13 +676,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Минтруд предложил разрешить подтверждение личности цифровым удостоверением в МАКС при получении пенсии на почте. Публикация описывает проект: возможность предъявлять QR-код вместо паспорта зависит от его принятия."
       },
       "content_hash": "767de014dd77c59fceae47d975ff2ff7d361d74c1e8522e47423b021d178e91d",
       "features_published_at": "2026-10-24T05:37:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -663,6 +707,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_roads",
@@ -687,13 +733,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Минтранс Татарстана сообщил о планах ввести в 2026 году более 200 км региональных и местных дорог и около 600 погонных метров мостов. В крупнейших агломерациях дорожные работы близки к завершению, однако весь заявленный объем еще не сдан."
       },
       "content_hash": "dcc7c86f4188625e7485bb520206f7e39fa08e1c5e80ed107608793ae472d688",
       "features_published_at": "2026-10-24T05:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -716,6 +764,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.8,
         "tags": [
           {
             "id": "biz_refine",
@@ -738,13 +788,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "По заявлению Александра Новака, после смягчения экспортных ограничений российские компании смогут вывезти в октябре 500 тысяч тонн дизельного топлива. Объем разрешенных поставок рассчитан с учетом обеспечения внутреннего рынка."
       },
       "content_hash": "b707ec54905c6a9517f47106a3b831d5fc6258076edc4333ab18d67de2e8c380",
       "features_published_at": "2026-10-23T19:40:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -768,6 +820,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_courier",
@@ -797,13 +851,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Резидент ОЭЗ Иннополис планирует открыть в первой половине 2027 года демонстрационную зону доставки грузов дронами. На площадке намерены показать работу городской сети датчиков и маршрутов беспилотной доставки; речь идет о будущем пилотном проекте."
       },
       "content_hash": "01441c3299659a214875f01320cb59e5bac7f46d4680c2173b3ddae58160dedd",
       "features_published_at": "2026-10-23T18:36:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -827,6 +883,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_agr",
@@ -856,13 +914,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Татарстане завершилась образовательная программа Агролидер для 136 учащихся агротехнологических классов. Участники знакомились с аграрными профессиями, профильным университетом и предприятиями переработки и рыбоводства."
       },
       "content_hash": "ad49a49a9831b46072817b9e9e27b5298f3f83a40d021ac6efc185d30a670507",
       "features_published_at": "2026-10-23T12:52:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -885,6 +945,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_laborlaw",
@@ -909,13 +971,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "После обращения бывшего работника трудовая инспекция Смоленской области добилась выплаты задолженности кожевенным предприятием. Работодатель погасил долг после профилактических мер инспекции."
       },
       "content_hash": "9038c5270b8f0118beff62da94b7f559b9d8b02ad2f30f26af16d21d78786796",
       "features_published_at": "2026-10-24T06:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -938,6 +1002,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_nuclear",
@@ -960,13 +1026,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "На инженерном совещании в Смоленской области представители атомной отрасли обсудили безопасность и повышение эффективности АЭС. Прогноз выработки российских атомных станций на 2026 год составляет не менее 220 млрд кВт·ч; это общероссийский показатель, а не объем одной станции."
       },
       "content_hash": "b1fa4a3704e2ec567c4c6f16c1b4f43eea06035f9a489819ee786fc3f11d9ece",
       "features_published_at": "2026-10-23T15:31:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -991,6 +1059,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_air",
@@ -1024,13 +1094,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Власти Смоленской области заключили с белорусским Трестом Минскпромстрой два контракта на реконструкцию аэропорта Северный общей стоимостью около 10 млрд рублей. В проект входят взлетно-посадочная полоса и терминал, работы рассчитаны на 2026–2029 годы."
       },
       "content_hash": "ccfd9649fe30bbc451e6e03a73b6caf93c78b947f677f5633d4addb414a238f9",
       "features_published_at": "2026-10-23T15:02:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1053,6 +1125,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_it",
@@ -1078,13 +1152,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Смоленском государственном университете готовится запуск бесплатного обучения цифровым профессиям в Школе 21 для совершеннолетних участников. Открыт прием заявок, отборочный интенсив назначен на 14 декабря."
       },
       "content_hash": "4ad389a4ca141576a0702a04ccf7cacb949681aa757fe7880d4dd6aa05c86ab2",
       "features_published_at": "2026-10-23T09:30:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1107,6 +1183,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_tourism",
@@ -1132,13 +1210,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Смоленске появились три интерактивных туристических киоска, созданных при участии МТС. Через них можно узнать о достопримечательностях, маршрутах и доступных билетах."
       },
       "content_hash": "4fdaebdcecc17631ebf6e521d7079b7e4269d4e339024b6c3d37215dd6ada918",
       "features_published_at": "2026-10-22T13:42:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -1161,6 +1241,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.8,
         "tags": [
           {
             "id": "biz_roads",
@@ -1183,13 +1265,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Проект федерального бюджета предусматривает 4,256 трлн рублей для дорожного фонда на три года. В планах строительство и реконструкция 1312 км дорог; указанные расходы относятся к проекту бюджета, а не к уже выполненным работам."
       },
       "content_hash": "15536a8ab52ba241ded3f93fa23f2c5650103cf4268c51649e8db7b1f63d798b",
       "features_published_at": "2026-10-22T12:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1212,6 +1296,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.1,
         "tags": [
           {
             "id": "biz_it",
@@ -1237,13 +1323,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "T2 и Смоленская технологическая академия провели третью выездную IT-школу для детей из реабилитационного центра Вишенки. Занятия знакомили участников с цифровыми технологиями и практическими навыками работы с ними."
       },
       "content_hash": "7199bb32f6853b3f9d3e661e91ad13d8a6dc77b2b6319284f74fa3c91748c91c",
       "features_published_at": "2026-10-21T11:45:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1266,6 +1354,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_gas",
@@ -1290,13 +1380,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Газовые организации Смоленской области и региональный центр стандартизации согласовали программу работы с коммерческим учетом газа. Она касается измерений, проверки оборудования и расчетов погрешностей учета."
       },
       "content_hash": "d9051fb59f175dfa13f5febc40fe80f69a22c9d3de6419daae6120c44bc114be",
       "features_published_at": "2026-10-20T11:14:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1319,6 +1411,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_mach",
@@ -1343,13 +1437,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Минпромторг Смоленской области и Союз машиностроителей заключили соглашение о сотрудничестве. Одно из направлений совместной работы касается подготовки кадров для региональных промышленных предприятий."
       },
       "content_hash": "88262f6f5ba6904b842a25c3be0ecd6adf5a33c94b2c14024fe41db73be8e12a",
       "features_published_at": "2026-10-20T10:58:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1372,6 +1468,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_tourism",
@@ -1396,13 +1494,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Рославле обновили туристическую территорию в районе Бурцевой горы. В рамках благоустройства установили 47 светильников и навигацию для посетителей."
       },
       "content_hash": "d6dd0f24c275c67b62ef0b1f8d1d3761b0429e4c82111258b914ddaaab64865d",
       "features_published_at": "2026-10-20T10:31:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Смоленская область",
@@ -1425,6 +1525,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_construct",
@@ -1450,13 +1552,15 @@
           "region_codes": [
             "reg_67"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Смоленске продолжается строительство комплекса Термолэнд Дельфин. На площадке выполнена часть бетонных работ, включая колонны, инженерные каналы и лестничные конструкции; комплекс еще не открыт."
       },
       "content_hash": "9997fb0e951e8992b94e4833091e475069d8ad750c73a55622585e3e09905f34",
       "features_published_at": "2026-10-19T10:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Новосибирская область",
@@ -1478,6 +1582,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.1,
         "tags": [
           {
             "id": "biz_health",
@@ -1498,13 +1604,15 @@
           "region_codes": [
             "reg_54"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Каргате прошла профессиональная конференция среднего медицинского персонала. Участники обсуждали практические вопросы работы, безопасность обращения с кровью, помощь пациентам с диабетом и наставничество."
       },
       "content_hash": "c3657abbd677f4fc5677f03ecde2f0ca6018b0cb30833f9bbe5fac970c1f9b24",
       "features_published_at": "2026-10-23T08:01:39+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Новосибирская область",
@@ -1527,6 +1635,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_digital",
@@ -1549,13 +1659,15 @@
           "region_codes": [
             "reg_54"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Жители Новосибирской области в 2026 году более 600 тысяч раз запрашивали электронные сведения о трудовой деятельности и индивидуальных лицевых счетах через Госуслуги. Документы доступны в цифровом виде с электронной подписью."
       },
       "content_hash": "d4c071dcb3b6fcc2e2be5fb6d67aa199e6385d83118c9d59704354abbfb368ab",
       "features_published_at": "2026-10-23T05:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "ID",
@@ -1579,6 +1691,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_oil",
@@ -1605,13 +1719,15 @@
         "geography": {
           "country_code": "ID",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Российская газета сообщает о подготовке Индонезией изменений правил импорта нефти для упрощения закупок из разных стран. Издание связывает эту инициативу в том числе с возможностями поставок из России; принятие новых правил в сообщении не подтверждено."
       },
       "content_hash": "2c5e38ca5980507dd5aafa829d58e94ae9dc5df563f33c536bb2e8c4e506745c",
       "features_published_at": "2026-10-24T19:35:07+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Астраханская область",
@@ -1634,6 +1750,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_refine",
@@ -1659,13 +1777,15 @@
           "region_codes": [
             "reg_30"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Власти Астраханской области сообщили о дополнительных поставках топлива для восстановления работы АЗС Лукойла. На момент публикации сохранялось ограничение в 30 литров на автомобиль, а станции Газпрома работали круглосуточно."
       },
       "content_hash": "60487a127e35656e5e1f7462b22a11923df6284f7f012d675155c2bdce061c52",
       "features_published_at": "2026-10-24T13:16:32+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Международный рынок",
@@ -1688,6 +1808,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.9,
         "tags": [
           {
             "id": "biz_oil",
@@ -1710,13 +1832,15 @@
         "geography": {
           "country_code": null,
           "region_codes": [],
+          "city_codes": [],
           "nationwide": null
         },
         "summary": "По данным Коммерсанта, фьючерсы Brent превысили 117 долларов за баррель и достигли максимума за полгода. В публикации рост связывают с политическими рисками; дальнейшее движение выше 120 долларов приведено как возможный сценарий аналитиков."
       },
       "content_hash": "8a7badfb6a233a63d5a6193963c4925b683b020e7060655f986b96c43df71cb3",
       "features_published_at": "2026-10-23T17:23:05+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "US",
@@ -1739,6 +1863,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_auto",
@@ -1762,13 +1888,15 @@
         "geography": {
           "country_code": "US",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "ТАСС передает заявление Дональда Трампа о планах Audi вложить 4,2 млрд долларов в автомобильный завод в американском штате Джорджия. Заявленная мощность составляет 200 тысяч машин в год; это сообщение о намерениях, а не о действующем производстве."
       },
       "content_hash": "346a2076466eef7d253a5e5a8e8412973bb4a705ae6617ccb6c52ad4b7551efc",
       "features_published_at": "2026-10-25T00:53:19+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -1791,6 +1919,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_health",
@@ -1813,13 +1943,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Замминистра здравоохранения предупредил о риске утечки персональных медицинских данных при их пересылке. ТАСС передает предупреждение о защите такой информации, а не сообщение о введении нового запрета."
       },
       "content_hash": "48281ce151cebd9ac8976a86e4e9192f51cb19f7dcdc05b1c32bd53935aefa94",
       "features_published_at": "2026-10-24T23:11:26+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -1842,6 +1974,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_passenger",
@@ -1864,13 +1998,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "В Общественной палате предложили ввести права для управления электросамокатами. В сообщении ТАСС речь идет об инициативе; обязательное лицензирование таким сообщением не устанавливается."
       },
       "content_hash": "1178680446832eac56b732312d02a36157d151efccdb869d885672750f0340bf",
       "features_published_at": "2026-10-24T22:46:02+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -1893,6 +2029,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_risk",
@@ -1915,13 +2053,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "МВД оценило ущерб от экономических преступлений за восемь месяцев почти в 400 млрд рублей. Показатель относится к зарегистрированным нарушениям за отчетный период, а не к прогнозу потерь отдельного бизнеса."
       },
       "content_hash": "b01547fe43380a088a1498656260677c27a00628affe064195305a810a3c79ca",
       "features_published_at": "2026-10-24T22:15:24+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "US",
@@ -1944,6 +2084,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_food",
@@ -1966,13 +2108,15 @@
         "geography": {
           "country_code": "US",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Москва 24 сообщает о взрыве и пожаре на предприятии дочерней компании PepsiCo в США. В доступном сообщении нет достаточных данных для оценки длительности остановки производства или последствий для поставок."
       },
       "content_hash": "9d290126ee14382d9eb2a2c5733fca4919eca25fae4e236e49aa85ab5df12582",
       "features_published_at": "2026-10-25T00:34:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Москва",
@@ -1995,6 +2139,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_roads",
@@ -2020,13 +2166,15 @@
           "region_codes": [
             "reg_77"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По сообщению мэра Москвы, строительство путепровода над Южной рокадой завершено. Москва 24 приводит эту информацию как обновление о готовности дорожного объекта."
       },
       "content_hash": "5bda612c12cf72eb5f6a4f17b4e6bb6a3f5861cee7e1a3d096a4fea62ab91ade",
       "features_published_at": "2026-10-24T07:31:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Камчатский край",
@@ -2049,6 +2197,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_air",
@@ -2074,13 +2224,15 @@
           "region_codes": [
             "reg_41"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "С Камчатки отправился первый прямой рейс в Харбин. Москва 24 сообщает о запуске авиасообщения с Китаем и возможности дальнейших пересадок; данные о грузовых перевозках в сообщении не приводятся."
       },
       "content_hash": "c68c4ee68231758e5eb17f60ce1c610c26fbb50ad9d34d322fa9f21ea138a5e2",
       "features_published_at": "2026-10-24T06:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Ивановская область",
@@ -2102,6 +2254,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_safety",
@@ -2120,13 +2274,15 @@
           "region_codes": [
             "reg_37"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Иванове потушили пожар в производственном здании. По сообщению Москвы 24, при тушении погиб спасатель; размер ущерба и влияние на выпуск продукции в доступном сообщении не определены."
       },
       "content_hash": "bf542867c799ae0cb7ba1712d6f413c08a04064d725b61e468c2e3f61cc98e56",
       "features_published_at": "2026-10-24T03:47:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2148,6 +2304,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "general",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_education",
@@ -2166,13 +2324,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Москва 24 сообщает о планируемых минимальных баллах ЕГЭ для поступления в вузы в 2027 году: для большинства предметов порог составит 40 баллов. Эти значения не означают проходной балл конкурсного приема."
       },
       "content_hash": "9a5ac5d0e3f53fac0d04fce3d3fc5cf612d2d0318c63798ff967f4ba45533be2",
       "features_published_at": "2026-10-23T22:02:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2195,6 +2355,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_meat",
@@ -2219,13 +2381,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В партии импортной буйволятины массой более семи тонн, проверенной во Владивостокском рыбном порту, лаборатория обнаружила остатки запрещенного противопаразитарного препарата. Событие касается контроля безопасности конкретной партии продовольствия."
       },
       "content_hash": "cf66335c6602722e34bcb48d47f269bdbb1ade3ca5f983e72ad301e269598f0a",
       "features_published_at": "2026-10-25T02:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2248,6 +2412,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_construct",
@@ -2272,13 +2438,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Суд взыскал около 4,4 млн рублей в пользу подрядчика Лига Сити по спору о строительстве спортивного центра с бассейном в Большом Камне. Разбирательство связано с расчетами после прекращения муниципального контракта."
       },
       "content_hash": "195b1dcb3b400a2eb8f0d66b24e23d5ef78a9784f0c7f3d50ea63fe1fe73ca2b",
       "features_published_at": "2026-10-24T03:40:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2300,6 +2468,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_health",
@@ -2321,13 +2491,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Санитарная авиация доставила двух пациентов из Дальнегорска во Владивосток для срочной медицинской помощи. После операций их выписали; публикация показывает работу межрайонной медицинской логистики."
       },
       "content_hash": "8f11025c858c8e7eb7eecbfa4b92b88c061e3350b0284fd3480a8acf49847e8c",
       "features_published_at": "2026-10-24T01:20:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2350,6 +2522,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_retail",
@@ -2374,13 +2548,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Во Владивостоке предложили 21 место для сезонной торговли: 12 под елочные базары и девять под мобильные объекты. Прием заявок объявлен до 18:00 26 октября."
       },
       "content_hash": "1d95bb90f8050634e9ab1f30f9e8e6b5afbad2d46f25ebc93f616c47db574a06",
       "features_published_at": "2026-10-23T09:30:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2403,6 +2579,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_roads",
@@ -2428,13 +2606,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Во Владивостоке завершили ремонт улицы 1-й Флотской и ввели одностороннюю схему движения. Работы включали дорожное покрытие, водоотвод и обустройство прилегающих участков."
       },
       "content_hash": "4347f02048508011f65baee52fac81884f05c2a5227a0302df1f19bdc9859f8a",
       "features_published_at": "2026-10-23T08:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2458,6 +2638,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_budget",
@@ -2484,13 +2666,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Во Владивостоке планируют сократить на 10% отдельные расходы на муниципальные закупки и субсидии в 2027 году. Сообщение описывает будущие бюджетные ограничения, а не уже отмененные контракты."
       },
       "content_hash": "dbe23d77f665f86739d70a2df4d30188ccf3ba8c26a0cecbad3a708eda1c099c",
       "features_published_at": "2026-10-23T07:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Приморский край",
@@ -2513,6 +2697,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_roads",
@@ -2538,13 +2724,15 @@
           "region_codes": [
             "reg_25"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Во Владивостоке запланировали изменение движения по полосам у Рудневского моста. Публикация описывает будущую установку знаков и распределение направлений для поворотов и движения прямо."
       },
       "content_hash": "5a36704f97179924edf88f9ffd3ccbe25e699f445167f0e31a3146d9feae9855",
       "features_published_at": "2026-10-23T06:30:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2568,6 +2756,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_fish",
@@ -2594,13 +2784,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "В совместном правительственном сообщении России и Китая заявлены планы расширять торговлю рыбной продукцией. Среди направлений сотрудничества названы регистрация поставщиков, аккредитация и контроль качества."
       },
       "content_hash": "95679bf74ece09c0c01397dc1c8ba5bc1002a6d8a1bccb6d04469ab234e039ef",
       "features_published_at": "2026-10-22T14:27:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Чукотский автономный округ",
@@ -2623,6 +2815,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_logistic",
@@ -2649,13 +2843,15 @@
           "region_codes": [
             "reg_87"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На Чукотке сообщили о выполнении плана доставки продовольствия в рамках северного завоза. При этом разгрузка в отдаленных населенных пунктах еще продолжалась; прибытие грузов не означает завершения всей доставки конечным получателям."
       },
       "content_hash": "1c74670a095351a4204f19bcb00f22ef725b54cb3c5bcd2e24f5d7173a7a2f74",
       "features_published_at": "2026-10-22T14:12:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2678,6 +2874,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_ship",
@@ -2700,13 +2898,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Красное Сормово перенесло часть операций по сборке бокс-кулеров на более ранний производственный этап. По данным предприятия, изменение организации работ сократило время изготовления на 66,7%."
       },
       "content_hash": "fce9793710c16dbb7be59c19e90bafa9bca991b9ac705a98c5b24761d080b831",
       "features_published_at": "2026-10-22T13:54:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Ленинградская область",
@@ -2729,6 +2929,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_ship",
@@ -2754,13 +2956,15 @@
           "region_codes": [
             "reg_47"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Ленинградской области спустили на воду электросуда Кронштадт и Выборг производства Эмпериум, рассчитанные на 140 пассажиров каждое. На момент публикации продолжались достройка и пусконаладка, начало перевозок еще не объявлено."
       },
       "content_hash": "806367437cb846b9d3d2d7427c317eb5e523c1a0fe61847c06bddf1fc16308b0",
       "features_published_at": "2026-10-22T13:03:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2784,6 +2988,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.75,
         "tags": [
           {
             "id": "biz_sea",
@@ -2810,13 +3016,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Проект бюджета на 2027–2029 годы предусматривает около 178 млрд рублей для морского и внутреннего водного транспорта. Средства планируется направить на инфраструктуру и поддержку отрасли; это бюджетные планы."
       },
       "content_hash": "4775d38312f09ee8810774a6d139a1998c995f5aa8f428f423afabcfd6ec2117",
       "features_published_at": "2026-10-22T12:46:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2839,6 +3047,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_ship",
@@ -2861,13 +3071,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На заводе Янтарь разработали новый сварочный пост для производственных работ. Предприятие связывает собственную разработку с удобством организации рабочего места и безопасностью сварщиков."
       },
       "content_hash": "38009268a5be3acde0bcb687d7ebac1ea19bd123f1ecf506001f9211ed99eb85",
       "features_published_at": "2026-10-22T12:17:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "GE",
@@ -2890,6 +3102,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_port",
@@ -2913,13 +3127,15 @@
         "geography": {
           "country_code": "GE",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Батумский порт сообщил о перевалке 6,25 млн тонн грузов за девять месяцев 2026 года, что на 13% больше год к году. В публикации отмечен рост контейнерных, паромных и нефтеналивных перевозок."
       },
       "content_hash": "27cc8160bad2dfb7b7fb7a7890fa48ba5c8dfa2815d0baf805bb4c34e1f29444",
       "features_published_at": "2026-10-22T11:58:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -2942,6 +3158,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_energy",
@@ -2965,13 +3183,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На выставке Heat&Power-2026 представили накопитель энергии Снегирь мощностью 100 кВА в составе гибридного энергокомплекса. Разработка предназначена для совместной работы с генерацией и оптимизации энергоснабжения; сообщение не содержит данных о заключенных поставках."
       },
       "content_hash": "3e86195244c90c4a8c354598bea18df161d0504f93d27267ce53af6b09b4689c",
       "features_published_at": "2026-10-22T10:41:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Республика Татарстан",
@@ -2994,6 +3214,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_ship",
@@ -3019,13 +3241,15 @@
           "region_codes": [
             "reg_16"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Представители промышленного кластера Татарстана посетили производственные площадки МКС и ознакомились с выпуском оборудования. По итогам встречи заявлены договоренности о развитии кооперации; объемы заказов в сообщении не названы."
       },
       "content_hash": "2c2c8ad50e467d409a2e0b28818b7ce1f901a2c25429c21a05314931661551f1",
       "features_published_at": "2026-10-22T09:27:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3048,6 +3272,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_health",
@@ -3072,13 +3298,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Калининградскую областную больницу пришли 14 врачей и 12 сотрудников среднего медицинского персонала. Среди новых специалистов есть выпускники целевого обучения."
       },
       "content_hash": "a80b3af077a7903d1ce211699d6abf50c3f8b32cc2704f71b1127adbfa90dcc9",
       "features_published_at": "2026-10-24T11:33:57+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3101,6 +3329,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_port",
@@ -3126,13 +3356,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Стоимость часа парковки у аэропорта Храброво составляет 400 рублей по тарифу, действующему с 1 октября. Первые 15 минут бесплатны, но при повторном въезде в течение двух часов оплата начинается с первой минуты; дата публикации не является датой изменения тарифа."
       },
       "content_hash": "69a0800bbca221e76a95cdf2da0eed6f5e20fab8372cdc457541e5f75d73824f",
       "features_published_at": "2026-10-23T17:26:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3155,6 +3387,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_it",
@@ -3179,13 +3413,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На конференции представитель VOXIS назвал Узбекистан перспективным рынком для калининградских экспортеров цифровых решений. Это оценка участника рынка, основанная на обсуждении спроса на технологии, а не гарантия будущих продаж."
       },
       "content_hash": "46d8b3415d047d76dc317b5c1119362a94941fb2d8157b4650cf47cbad429e0b",
       "features_published_at": "2026-10-23T14:28:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3209,6 +3445,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_auto",
@@ -3239,13 +3477,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По опубликованным данным, объем обрабатывающего производства Калининграда в первом полугодии вырос на 35% год к году. В структуре выпуска заметную долю занимают автопроизводство, пищевая и химическая промышленность."
       },
       "content_hash": "e1d12fb74dc484385dc916280304bdbd224568e2b53e8e36be8b69ecf3e2c622",
       "features_published_at": "2026-10-23T12:14:07+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3267,6 +3507,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_comreal",
@@ -3287,13 +3529,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Советске выставили на продажу часть исторического здания с коммерческими помещениями за 16 млн рублей. Указанная сумма является ценой предложения, а не состоявшейся сделки."
       },
       "content_hash": "4e36925c14c741ea980c85fa6bcdae268bb62662546b03fa0771561b10a6f258",
       "features_published_at": "2026-10-23T11:37:18+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Калининградская область",
@@ -3316,6 +3560,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_telecom",
@@ -3340,13 +3586,15 @@
           "region_codes": [
             "reg_39"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "МегаФон сообщил о модернизации оборудования в Советске и доступной скорости мобильного интернета до 100 Мбит/с. Показатель приведен со слов оператора и не является независимым измерением скорости для каждого абонента."
       },
       "content_hash": "69c805d56cb443fb86bfd97b106dde4f89e1fc2a98536e11c58786aee704252a",
       "features_published_at": "2026-10-23T09:50:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Москва, Санкт-Петербург, Нижегородская область",
@@ -3369,6 +3617,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_jewel",
@@ -3396,13 +3646,15 @@
             "reg_78",
             "reg_52"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Янтарный комбинат планирует до конца года открыть три магазина: в Москве, Санкт-Петербурге и Нижнем Новгороде. Публикация касается расширения розничной сети, а не уже начавшейся работы новых точек."
       },
       "content_hash": "584703de176d9d858f2c6d3c3672193d49f1d5f1669cefaba2a78dd52b1df0b4",
       "features_published_at": "2026-10-23T08:51:58+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -3426,6 +3678,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_passenger",
@@ -3453,13 +3707,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Яндекс сообщил о восстановлении выплат водителям такси после сбоев, связанных с атаками на центры обработки данных. Отдельные операции вывода средств еще восстанавливались; основной сервис поездок продолжал работать."
       },
       "content_hash": "a8f2a43c9f7dd2b4381e6f9fe4efdf97c2357cce6415df25a3aab03b45e7dbcb",
       "features_published_at": "2026-10-23T07:55:40+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Московская область",
@@ -3482,6 +3738,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_agr",
@@ -3506,13 +3764,15 @@
           "region_codes": [
             "reg_50"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Мортадель планирует агротехнопарк площадью 127 га в Московской области с вложениями около 3 млрд рублей и завершением к четвертому кварталу 2028 года. Проект рассчитан более чем на 40 фермерских резидентов и предусматривает закупку их продукции."
       },
       "content_hash": "1712c54b40e5409ffb8f298a52ee5a8628d1b1a8e229060dc20022edb606a0cb",
       "features_published_at": "2026-10-24T06:00:03+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Нижегородская область",
@@ -3535,6 +3795,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_dairy",
@@ -3559,13 +3821,15 @@
           "region_codes": [
             "reg_52"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Руслакто пересматривает проект агрокластера в Нижегородской области, делая акцент на переработке молока. Для развития животноводческой части компания ищет инвестора; прежняя конфигурация проекта не описывается как уже реализованная."
       },
       "content_hash": "9d333d709e921e0f361e20dbb74bb7a3cdf08b03cf4dcea12324b9401dfa91f3",
       "features_published_at": "2026-10-23T13:30:37+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -3589,6 +3853,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_agr",
@@ -3616,13 +3882,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Отраслевые объединения садоводов предложили ограничить импорт плодовых саженцев, оставив исключения для отдельных посадочных материалов. Это обращение к властям, а не действующее ограничение на ввоз."
       },
       "content_hash": "5f0c0847e23ca17d637d39973d02011dfc2af18efa5188b3cab72fcaf0bd64b0",
       "features_published_at": "2026-10-22T14:06:31+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -3645,6 +3913,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_agr",
@@ -3667,13 +3937,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Агроинвестор сообщает о восстановлении цен на пшеницу после снижения. В обзоре рассматриваются экспортная конъюнктура и возможные интервенции; динамика по регионам различается и не задает единую цену для всех производителей."
       },
       "content_hash": "b2ffc023301be400ac3a6a605b500af706df7e096e487bec33c224aa373d6f57",
       "features_published_at": "2026-10-21T14:07:54+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -3697,6 +3969,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_agr",
@@ -3723,13 +3997,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Суд принял заявление налоговой службы о банкротстве Эко-культуры с требованиями свыше 148 млн рублей. Компания заявляет о намерении урегулировать задолженность; принятие заявления не означает признания должника банкротом."
       },
       "content_hash": "d8900f59919a16f536a936c19d5c110bea3f89cc86a2d49de913f12cb5e58c8b",
       "features_published_at": "2026-10-19T10:39:20+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Россия",
@@ -3752,6 +4028,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_food",
@@ -3774,13 +4052,15 @@
         "geography": {
           "country_code": "RU",
           "region_codes": [],
+          "city_codes": [],
           "nationwide": true
         },
         "summary": "Представители мукомольной отрасли обсуждают возможность роста экспорта муки в сезоне 2026/27 на фоне логистических проблем в Черноморском регионе. Оценка до 1,5 млн тонн приведена как прогноз, а не фактический объем вывоза."
       },
       "content_hash": "22fc2172d42006a6e86928f2b74845e4f820057f9f62c04caa5d9d2337c0b91c",
       "features_published_at": "2026-10-19T06:00:47+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Хабаровский край",
@@ -3803,6 +4083,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_culture",
@@ -3828,13 +4110,15 @@
           "region_codes": [
             "reg_27"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Музей имени Гродекова получил три награды на региональном этапе конкурса туристических сувениров во Владивостоке. Представленная продукция связана с продвижением культурных объектов и туристических предложений Хабаровского края."
       },
       "content_hash": "3e8cefad5995a22f586db9fd2e1d2b3c071177e611a41cf8d0bea9020ff90ab7",
       "features_published_at": "2026-10-23T09:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Хабаровский край",
@@ -3857,6 +4141,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_agr",
@@ -3881,13 +4167,15 @@
           "region_codes": [
             "reg_27"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Хабаровском крае отобрали 16 фермеров из семи районов для предоставления грантов. На конкурс поступило 30 заявок; поддержка предназначена для растениеводства, птицеводства и других сельскохозяйственных проектов."
       },
       "content_hash": "ea075e5c7a2f57dc7e93316355a0ecb21961e9306a529d006ef5c9af555bfa99",
       "features_published_at": "2026-10-23T04:29:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Хабаровский край",
@@ -3910,6 +4198,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_heat",
@@ -3935,13 +4225,15 @@
           "region_codes": [
             "reg_27"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "После ремонта участков теплосети в Южном микрорайоне Хабаровска восстанавливают дороги, тротуары и газоны. Основные работы на коммуникациях завершены до отопительного сезона, благоустройство оставшихся участков поручено закончить к 1 ноября."
       },
       "content_hash": "c419656c83b89bfba27fdaadce9ec967376906452a32e7e7499fa604df3673d6",
       "features_published_at": "2026-10-23T04:04:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Хабаровский край",
@@ -3964,6 +4256,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.15,
         "tags": [
           {
             "id": "biz_education",
@@ -3989,13 +4283,15 @@
           "region_codes": [
             "reg_27"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Хабаровске продолжается капитальный ремонт школы № 10 с обновлением инженерных систем, помещений и оборудования. По информации властей, подрядчик опережает график, а договорный срок завершения установлен к следующему учебному году."
       },
       "content_hash": "548c672ba3b18bc3c5b9193c663553a0b3df8cbf56d11d2885cc9c8e8cdf1ef9",
       "features_published_at": "2026-10-23T00:54:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Иркутская область",
@@ -4018,6 +4314,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_education",
@@ -4042,13 +4340,15 @@
           "region_codes": [
             "reg_38"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Министр образования Иркутской области опроверг сведения о планируемом сокращении учителей. По данным региональных властей, в текущем учебном году число работников выросло на 357 человек, при этом управленческие штаты приводят к нормативам."
       },
       "content_hash": "6b009cb5475a5f2171741bad145d96893f596653dd673c92f485a4e355ffb388",
       "features_published_at": "2026-10-24T11:52:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Иркутская область, Московская область",
@@ -4071,6 +4371,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_air",
@@ -4097,13 +4399,15 @@
             "reg_38",
             "reg_50"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Рейс из Шереметьево в Иркутск задержался почти на два часа после временных ограничений работы аэропорта. Позднее прибытие самолета повлияло и на обратный вылет; информация относится к конкретным рейсам 24 октября."
       },
       "content_hash": "6b25fce5d7b6cd204dd9c036b42b8d79ccf395a39ecfa1c9181011d47fef335a",
       "features_published_at": "2026-10-24T04:10:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Иркутская область, Красноярский край",
@@ -4126,6 +4430,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_air",
@@ -4151,13 +4457,15 @@
             "reg_38",
             "reg_24"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Авиакомпанию привлекли к административной ответственности за отказ в перевозке из-за продажи билетов сверх вместимости самолета на маршруте Иркутск — Красноярск. Публикация вышла сейчас, но сам случай овербукинга произошел в октябре 2025 года."
       },
       "content_hash": "1b132c5b6025d82d6c2f03f3a3a48cf2d0a4400e6568edd40e0346a461beceb7",
       "features_published_at": "2026-10-23T23:51:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Иркутская область",
@@ -4180,6 +4488,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_education",
@@ -4205,13 +4515,15 @@
           "region_codes": [
             "reg_38"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Иркутске определили муниципальный участок, подходящий для детского сада на 240 мест в Октябрьском округе. Для проекта требуется изменение назначения территории; строительство еще не объявлено завершенным или начатым."
       },
       "content_hash": "f03694eb5a013fb027478707e09f2cecf909ecbdf9c34dbd6aba65e8229b7f29",
       "features_published_at": "2026-10-23T09:54:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Иркутская область",
@@ -4235,6 +4547,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.6,
         "tags": [
           {
             "id": "biz_freight",
@@ -4264,13 +4578,15 @@
           "region_codes": [
             "reg_38"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Госавтоинспекция предупредила об осложнении движения по трассе Байкал в Слюдянском районе из-за погоды. Особенно отмечены риски для большегрузов на скользких участках и поворотах; сообщение не является объявлением полного закрытия трассы."
       },
       "content_hash": "9720504b7cd098ddf12674451978ff7fffe28e08ef06e3f2ec2251bd161deaed",
       "features_published_at": "2026-10-23T07:45:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4293,6 +4609,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_roads",
@@ -4318,13 +4636,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Краснодарском крае начался ремонт почти шести километров дороги Краснодар — Кропоткин около Тбилисской. Подрядчикам предстоит обновить основание и покрытие, завершение предусмотрено к концу августа 2027 года."
       },
       "content_hash": "9895b15fe988b2f3f3be99d56b883799e6e7ac241c8cf8b9589bf2cf8b090462",
       "features_published_at": "2026-10-24T12:39:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4346,6 +4666,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_agr",
@@ -4366,13 +4688,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По данным администрации Анапы, виноград убран на 84% плодоносящих площадей, сбор достиг 43,4 тысячи тонн. Уборку красных сортов продолжают и планируют завершить к 1 ноября; итоговый урожай пока прогнозируется."
       },
       "content_hash": "5e5fe8dcb6ffa73d8d1add4d8641054c2b908b08a9249267f6cb549961c6efc5",
       "features_published_at": "2026-10-24T10:50:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4395,6 +4719,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_air",
@@ -4420,13 +4746,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Аэропорт Сочи объявил осенне-зимнюю программу с 25 октября: 44 направления, включая 27 внутренних и 17 международных. В расписании заявлены 25 перевозчиков; конкретные рейсы следует проверять по актуальному табло."
       },
       "content_hash": "7b557c017ceac8dafb677e0bb87812cfbde69997339baf811480dc0543daa462",
       "features_published_at": "2026-10-23T12:55:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край, Ростовская область",
@@ -4450,6 +4778,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_bank",
@@ -4479,13 +4809,15 @@
             "reg_23",
             "reg_61"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Сбер сообщил, что Краснодарский край и Ростовская область вошли в число лидеров по выплатам компенсации НДС за эквайринг в третьем квартале. По данным банка, ростовские предприниматели получили более 13 млн рублей; это результаты банковской программы, а не новая общая налоговая льгота."
       },
       "content_hash": "6b601e1562f2bf50d7d1e48fd7928b0d2dea77b3f1f98e428c47736754830d49",
       "features_published_at": "2026-10-23T10:25:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край, Новосибирская область",
@@ -4508,6 +4840,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_hotel",
@@ -4534,13 +4868,15 @@
             "reg_23",
             "reg_54"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По данным бронирований сервиса Отелло, средняя стоимость ночи в Сочи и Новосибирске на начало ноября не превышает пяти тысяч рублей. Исследование отражает выборку сервиса; цены отдельных объектов и дат могут отличаться."
       },
       "content_hash": "e891e9f8ea2bc347d07dbbd746d08af752de3ebf622851809e54a877ce2d6cb2",
       "features_published_at": "2026-10-23T09:49:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4563,6 +4899,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_housing",
@@ -4588,13 +4926,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Сочи на капитальный ремонт 72 многоквартирных домов в 2026 году направлено почти 989 млн рублей. По сообщению мэра, основные работы на большинстве объектов выполнены, оставшиеся планируется закончить к 1 декабря."
       },
       "content_hash": "f49a57bd4ce02a3869d013f721bdd23d00bf6bbbe4722c719424546bfacb71b5",
       "features_published_at": "2026-10-23T09:31:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4617,6 +4957,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_passenger",
@@ -4642,13 +4984,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По данным мэрии Краснодара, парк прокатных электросамокатов вырос до 9,3 тысячи, на 32,8% менее чем за два года. В городе сохраняются ограничения движения и скорости на отдельных участках."
       },
       "content_hash": "c60a44ff31565a9cc09d110be0fcab36f4a9c749bb88475bbf9a2441a039eb00",
       "features_published_at": "2026-10-23T08:17:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4671,6 +5015,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_housing",
@@ -4696,13 +5042,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Эксперты рынка жилья объясняют расхождение средних цен квартир в Геленджике и Сочи изменением состава предложений и доступностью земли. Снижение среднего чека в Сочи не означает равномерного удешевления квадратного метра во всех сегментах."
       },
       "content_hash": "07e313bfa4ddb055f2d4f8494b7094b2a909274f42e09ed1b4207fc8f72d54c6",
       "features_published_at": "2026-10-23T08:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4725,6 +5073,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_credit",
@@ -4750,13 +5100,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По данным Объединенного кредитного бюро, в сентябре в Краснодарском крае выдали 4,12 тысячи автокредитов на 6,78 млрд рублей. Число выдач выросло на 2% к августу, а общая сумма практически не изменилась."
       },
       "content_hash": "2a6f8fcba1f23b175e3c2cd5d0347c78f888708f9defb2f0899d9d1bd1104ad4",
       "features_published_at": "2026-10-23T06:49:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4779,6 +5131,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.7,
         "tags": [
           {
             "id": "biz_investment",
@@ -4801,13 +5155,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Власти Краснодарского края обсудили с Ассоциацией европейского бизнеса сотрудничество и портфель региональных проектов объемом 5,8 трлн рублей. Подписано соглашение о консультационной поддержке бизнеса; эта сумма не означает новые уже привлеченные европейские инвестиции."
       },
       "content_hash": "1405319c6b16e9e26d77be0481f999ce526a1090f0a158fe0422c461e8a8b2b1",
       "features_published_at": "2026-10-23T06:26:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край, Ростовская область",
@@ -4830,6 +5186,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_insurance",
@@ -4856,13 +5214,15 @@
             "reg_23",
             "reg_61"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "СберСтрахование жизни сообщило о 4,6 тысячи выплат по кредитному страхованию в Краснодарском крае и Ростовской области за январь–сентябрь. Общая сумма составила 406 млн рублей, включая 185 млн на Кубани и 221 млн на Дону."
       },
       "content_hash": "ff4a78b582c5659aecbdd333acae4fe29df0c379bb89f6eeaca864b59fd333d9",
       "features_published_at": "2026-10-22T14:43:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Краснодарский край",
@@ -4885,6 +5245,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.5,
         "tags": [
           {
             "id": "biz_housing",
@@ -4910,13 +5272,15 @@
           "region_codes": [
             "reg_23"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Власти Краснодарского края объявили планы направить 13,6 млрд рублей на капитальный ремонт в 2027 году. Программа предусматривает обновление более 700 домов и замену 77 лифтов; это расходы будущего периода."
       },
       "content_hash": "44290dfaa8e3ad4954aa615092245cce25f9b3f7408b06cd15ba3220fbee68dd",
       "features_published_at": "2026-10-22T13:00:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -4939,6 +5303,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_air",
@@ -4964,13 +5330,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Регулярные пассажирские рейсы между Кунаширом и Шикотаном планируется возобновить 25 октября с дальнейшими полетами по воскресеньям. Регион выделил средства после приостановки перевозок из-за удорожания топлива и запчастей."
       },
       "content_hash": "c50345ac44d606220e7d92d60b3569215dc20b1b24501982fe5435478f026fc3",
       "features_published_at": "2026-10-24T03:30:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -4993,6 +5361,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_telecom",
@@ -5018,13 +5388,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "МТС сообщила о запуске LTE возле Охотского лососевого рыбоводного завода в Мальково. По данным оператора, новое оборудование обеспечивает скорость до 60 Мбит/с и доступ к цифровым сервисам для предприятия и территории рядом с ним."
       },
       "content_hash": "a7bcd40a3f05527b84d92bd3df996306bc452cca4ff93dcff69ad72f2198f672",
       "features_published_at": "2026-10-23T02:54:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -5048,6 +5420,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_food",
@@ -5078,13 +5452,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Власти Сахалинской области сообщили об открытии 12 пищевых производств с начала года. Среди них пекарни, мясной цех, выпуск питьевой воды и переработка молока; ассортимент местной продукции расширился на 145 позиций."
       },
       "content_hash": "98259f3b7e9e12d3ddde735ed75ed7ee74d7fb5d4d29adf55c5cb5f9dffeb89e",
       "features_published_at": "2026-10-22T06:40:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -5107,6 +5483,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.75,
         "tags": [
           {
             "id": "biz_science",
@@ -5131,13 +5509,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На инвестиционном совете Сахалинской области представили программы поддержки технологических разработок. Одна из программ предусматривает гранты от 25 до 250 млн рублей и собственное финансирование не менее половины суммы гранта; получение поддержки требует выполнения условий отбора."
       },
       "content_hash": "a3180ebbaf9485fd25eb0037ef34cff5122672f0bc0ecef25a815402cf99135b",
       "features_published_at": "2026-10-22T03:49:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -5159,6 +5539,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_telecom",
@@ -5179,13 +5561,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "МТС сообщила об установке дополнительного оборудования LTE в Горнозаводске Сахалинской области. Оператор оценивает прирост скорости мобильного интернета в 35%; улучшения затронули жилые районы и социальные объекты."
       },
       "content_hash": "8c48853b21ff529d15f040ce3792b934abef3f24db72f5aa17b81d3eb7e0aa06",
       "features_published_at": "2026-10-21T04:59:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Сахалинская область",
@@ -5208,6 +5592,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_ecology",
@@ -5232,13 +5618,15 @@
           "region_codes": [
             "reg_65"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "На побережье у Пензенского в Томаринском районе обнаружено загрязнение нефтепродуктами. Администрация организовала очистку, Росприроднадзор должен отобрать пробы; источник загрязнения в публикации не установлен."
       },
       "content_hash": "2dbf84983f1321d34818620886f5fd960c64bd4c8c7c15e0f2b38a38180cb9a1",
       "features_published_at": "2026-10-20T00:10:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Амурская область, Чукотский автономный округ, Приморский край, Забайкальский край, Хабаровский край",
@@ -5263,6 +5651,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.4,
         "tags": [
           {
             "id": "biz_sez",
@@ -5301,13 +5691,15 @@
             "reg_75",
             "reg_27"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "По данным КРДВ, резиденты преференциальных режимов вложили в проекты 502,6 млрд рублей за текущий период 2026 года. Среди лидеров названы Амурская область, Чукотка, Приморский, Забайкальский и Хабаровский края; сумма относится ко всем указанным режимам, а не к одной Сахалинской области."
       },
       "content_hash": "74c44424512a6867883298eb502d18985487670c2e96fc255610deb72629a5a1",
       "features_published_at": "2026-10-19T07:54:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Магаданская область, Приморский край, Камчатский край, Москва",
@@ -5330,6 +5722,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "organization",
+        "business_relevance": 0.3,
         "tags": [
           {
             "id": "biz_air",
@@ -5358,13 +5752,15 @@
             "reg_41",
             "reg_77"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "Группа Аэрофлот назначила дополнительные рейсы из Москвы в Магадан, Владивосток и Петропавловск-Камчатский на 29 октября — 1 ноября. Полеты должна выполнить авиакомпания Россия на Boeing 777; речь идет о добавленных частотах на период каникул."
       },
       "content_hash": "006b2aa0015a12c65071bbb928fa7c62b1b1929d355189b56463f9d04b33f53a",
       "features_published_at": "2026-10-22T12:47:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
     },
     {
       "region": "Магаданская область",
@@ -5387,6 +5783,8 @@
         "language": "ru"
       },
       "features": {
+        "business_scope": "local",
+        "business_relevance": 0.2,
         "tags": [
           {
             "id": "biz_fitness",
@@ -5412,13 +5810,212 @@
           "region_codes": [
             "reg_49"
           ],
+          "city_codes": [],
           "nationwide": false
         },
         "summary": "В Магадане зарегистрировали права и поставили на кадастровый учет объекты второй очереди всесезонного трамплинного комплекса. Это завершенный этап оформления спортивной инфраструктуры, а не подтверждение работы всех объектов комплекса в полном режиме."
       },
       "content_hash": "eac061688711e8d2593927b020c597c3b94053c567ce50df3064580631e60da5",
       "features_published_at": "2026-10-22T01:36:00+00:00",
-      "tagging_version": "assistant-reviewed-v1"
+      "tagging_version": "assistant-reviewed-v1:business-context-v1",
+      "business_context_review": "Масштаб и деловая значимость: модель хакатона, с проверкой ассистентом, 2026-10-25"
+    },
+    {
+      "region": "Россия",
+      "topics": [
+        "biz_tax",
+        "biz_account"
+      ],
+      "published_precision": "day",
+      "text_kind": "attributed_summary",
+      "article": {
+        "source": "consultant.ru",
+        "external_id": null,
+        "url": "https://www.consultant.ru/legalnews/32884/",
+        "title": "ФНС напомнила о сроках уведомлений и авансов по имущественным налогам",
+        "body": "Краткий пересказ публикации КонсультантПлюс.\n\nПо сообщению КонсультантПлюс, уведомления об авансах по имущественным налогам за третий квартал 2026 года следует представить не позднее 26 октября, а уплату произвести до 28 октября. Обязанность зависит от применимых региональных и муниципальных правил; для отдельных организаций действуют продлённые сроки. Публикация ссылается на информацию ФНС от 23 октября.",
+        "published_at": "2026-10-23T00:00:00+03:00",
+        "language": "ru"
+      },
+      "features": {
+        "business_scope": "general",
+        "business_relevance": 0.85,
+        "tags": [
+          {
+            "id": "biz_tax",
+            "confidence": 1.0
+          },
+          {
+            "id": "biz_account",
+            "confidence": 1.0
+          }
+        ],
+        "event_type": null,
+        "affected_factors": [],
+        "industries": [],
+        "geography": {
+          "country_code": "RU",
+          "region_codes": [],
+          "city_codes": [],
+          "nationwide": true
+        },
+        "summary": "По сообщению КонсультантПлюс, уведомления об авансах по имущественным налогам за третий квартал 2026 года следует представить не позднее 26 октября, а уплату произвести до 28 октября. Обязанность зависит от применимых региональных и муниципальных правил; для отдельных организаций действуют продлённые сроки. Публикация ссылается на информацию ФНС от 23 октября."
+      },
+      "content_hash": "a635df2aaa594d860508d6cb0e9a6eb619c0117dbbddd987623331aa940bc5a9",
+      "features_published_at": "2026-10-23T00:00:00+03:00",
+      "tagging_version": "assistant-reviewed-v2:business-context-v1",
+      "review_basis": "https://www.consultant.ru/legalnews/32884/",
+      "business_context_review": "Краткий пересказ и признаки проверены ассистентом по публикации, 2026-10-25"
+    },
+    {
+      "region": "Россия",
+      "topics": [
+        "biz_health",
+        "biz_regulation"
+      ],
+      "published_precision": "day",
+      "text_kind": "attributed_summary",
+      "article": {
+        "source": "consultant.ru",
+        "external_id": null,
+        "url": "https://www.consultant.ru/legalnews/32925/",
+        "title": "Утверждён стандарт помощи взрослым при внебольничной пневмонии",
+        "body": "Краткий пересказ публикации КонсультантПлюс.\n\nКонсультантПлюс сообщает о новом стандарте диагностики и лечения внебольничной пневмонии у взрослых, который вступает в силу 3 ноября 2026 года. Он охватывает амбулаторную и стационарную помощь. В публикации указан средний срок лечения законченного случая в 12 календарных дней.",
+        "published_at": "2026-10-24T00:00:00+03:00",
+        "language": "ru"
+      },
+      "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.9,
+        "tags": [
+          {
+            "id": "biz_health",
+            "confidence": 1.0
+          },
+          {
+            "id": "biz_regulation",
+            "confidence": 1.0
+          }
+        ],
+        "event_type": null,
+        "affected_factors": [],
+        "industries": [
+          "biz_health"
+        ],
+        "geography": {
+          "country_code": "RU",
+          "region_codes": [],
+          "city_codes": [],
+          "nationwide": true
+        },
+        "summary": "КонсультантПлюс сообщает о новом стандарте диагностики и лечения внебольничной пневмонии у взрослых, который вступает в силу 3 ноября 2026 года. Он охватывает амбулаторную и стационарную помощь. В публикации указан средний срок лечения законченного случая в 12 календарных дней."
+      },
+      "content_hash": "44097b06d09303323c2ed9a132cd8d256a27b8426f9ec9109a4012183b0cb325",
+      "features_published_at": "2026-10-24T00:00:00+03:00",
+      "tagging_version": "assistant-reviewed-v2:business-context-v1",
+      "review_basis": "https://www.consultant.ru/legalnews/32925/",
+      "business_context_review": "Краткий пересказ и признаки проверены ассистентом по публикации, 2026-10-25"
+    },
+    {
+      "region": "Россия",
+      "topics": [
+        "biz_health",
+        "biz_regulation"
+      ],
+      "published_precision": "day",
+      "text_kind": "attributed_summary",
+      "article": {
+        "source": "consultant.ru",
+        "external_id": null,
+        "url": "https://www.consultant.ru/legalnews/32880/",
+        "title": "Минздрав представил проект новой номенклатуры медицинских услуг",
+        "body": "Краткий пересказ публикации КонсультантПлюс.\n\nПо данным КонсультантПлюс, проект новой номенклатуры медицинских услуг проходит общественное обсуждение. Предлагаемый основной код содержит минимум 14 знаков и пять уровней; дополнительные расширения могут увеличить его до 34 знаков. Планируемая дата вступления в силу указана как 1 января 2027 года. Это проект, а не уже действующая номенклатура.",
+        "published_at": "2026-10-23T00:00:00+03:00",
+        "language": "ru"
+      },
+      "features": {
+        "business_scope": "industry",
+        "business_relevance": 0.65,
+        "tags": [
+          {
+            "id": "biz_health",
+            "confidence": 1.0
+          },
+          {
+            "id": "biz_regulation",
+            "confidence": 1.0
+          }
+        ],
+        "event_type": null,
+        "affected_factors": [],
+        "industries": [
+          "biz_health"
+        ],
+        "geography": {
+          "country_code": "RU",
+          "region_codes": [],
+          "city_codes": [],
+          "nationwide": true
+        },
+        "summary": "По данным КонсультантПлюс, проект новой номенклатуры медицинских услуг проходит общественное обсуждение. Предлагаемый основной код содержит минимум 14 знаков и пять уровней; дополнительные расширения могут увеличить его до 34 знаков. Планируемая дата вступления в силу указана как 1 января 2027 года. Это проект, а не уже действующая номенклатура."
+      },
+      "content_hash": "d2c6801b64ee72932a779195d2171b56bd56ad7ef56bbb1141d6aa3d6e79f935",
+      "features_published_at": "2026-10-23T00:00:00+03:00",
+      "tagging_version": "assistant-reviewed-v2:business-context-v1",
+      "review_basis": "https://www.consultant.ru/legalnews/32880/",
+      "business_context_review": "Краткий пересказ и признаки проверены ассистентом по публикации, 2026-10-25"
+    },
+    {
+      "region": "Россия",
+      "topics": [
+        "biz_it",
+        "biz_account",
+        "biz_regulation"
+      ],
+      "published_precision": "day",
+      "text_kind": "attributed_summary",
+      "article": {
+        "source": "consultant.ru",
+        "external_id": null,
+        "url": "https://www.consultant.ru/legalnews/32869/",
+        "title": "Росстат уточнил отражение расходов на ИИ в форме 3-информ",
+        "body": "Краткий пересказ публикации КонсультантПлюс.\n\nКонсультантПлюс сообщает об уточнении раздела 22 статистической формы 3-информ, которую будут подавать с 15 марта 2027 года. Расходы на аренду машин и оборудования для внедрения и использования ИИ отражаются в строке 2205, на аренду программного обеспечения в строке 2206. Сообщение касается заполнения отчёта его респондентами, а не введения обязанности для всех организаций.",
+        "published_at": "2026-10-22T00:00:00+03:00",
+        "language": "ru"
+      },
+      "features": {
+        "business_scope": "general",
+        "business_relevance": 0.7,
+        "tags": [
+          {
+            "id": "biz_it",
+            "confidence": 1.0
+          },
+          {
+            "id": "biz_account",
+            "confidence": 1.0
+          },
+          {
+            "id": "biz_regulation",
+            "confidence": 1.0
+          }
+        ],
+        "event_type": null,
+        "affected_factors": [],
+        "industries": [],
+        "geography": {
+          "country_code": "RU",
+          "region_codes": [],
+          "city_codes": [],
+          "nationwide": true
+        },
+        "summary": "КонсультантПлюс сообщает об уточнении раздела 22 статистической формы 3-информ, которую будут подавать с 15 марта 2027 года. Расходы на аренду машин и оборудования для внедрения и использования ИИ отражаются в строке 2205, на аренду программного обеспечения в строке 2206. Сообщение касается заполнения отчёта его респондентами, а не введения обязанности для всех организаций."
+      },
+      "content_hash": "5877a682e666d9826ffcfa57215a6c351a2a196e507304caee90ffbf20fc9075",
+      "features_published_at": "2026-10-22T00:00:00+03:00",
+      "tagging_version": "assistant-reviewed-v2:business-context-v1",
+      "review_basis": "https://www.consultant.ru/legalnews/32869/",
+      "business_context_review": "Краткий пересказ и признаки проверены ассистентом по публикации, 2026-10-25"
     }
   ],
   "annotation_policy": "assistant-reviewed-v1: теги выбраны ассистентом из общего справочника по явным темам пересказа. confidence=1 используется как фиксированный вес включенного тега, не калиброванная вероятность и не экспертная оценка качества. Неизвестные тип события и факторы оставлены пустыми. Регион относится к событию, не к редакции; список регионов не претендует на полноту. Обучающих меток компания + новость нет"

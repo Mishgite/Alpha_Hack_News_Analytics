@@ -2,7 +2,7 @@
 
 import asyncio
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timedelta, timezone
 
 from app.schemas.agent import (
     AnalysisDraft,
@@ -17,6 +17,8 @@ from app.services.insights import InsightService
 from app.services.reports import ReportService, split_report_text
 
 from .client import JsonClient
+
+NEWS_TIMEZONE = timezone(timedelta(hours=3))
 
 COMPANY_FIELDS = (
     "okved_code",
@@ -47,6 +49,10 @@ ANALYSIS_INSTRUCTION = """Подготовь бизнес-разбор толь�
 Отделяй событие, сценарии влияния и позицию банка, не давай торговых приказов
 Для why_important используй конкретные company_feature_refs из company_features
 Регистрация компании не доказывает регион её операций, наличие кредита не доказывает размер долга
+Отрасль, возраст и штат не доказывают владение имуществом, наличие налоговой обязанности или конкретных договоров
+Не добавляй штрафы, пени и другие правовые последствия, если о них нет сведений в материалах
+Не заполняй раздел ради заполнения: если связь с признаками компании не подтверждена, why_important=[] и пояснение в limitations
+Условный сценарий тоже должен опираться на материалы, общее знание не заменяет источник
 Для каждого утверждения заполни evidence_ids: ключ это id источника, значение это список ID подтверждающих отрывков из его passages
 Один факт должен содержать одно утверждение, для составного вывода выбери все нужные отрывки
 Не выдумывай источники, даты, цифры, позицию банка или сведения о компании
@@ -149,7 +155,7 @@ class AnalysisAgent:
         """читает актуальную версию корпуса перед проверкой кеша"""
         return AnalysisVersions(
             model_id=self.client.model_id,
-            prompt_version="insight-v3-evidence-selection",
+            prompt_version="insight-v4-evidence-selection",
             report_corpus_version=await asyncio.to_thread(self.reports.corpus_version),
             agent_version="planned-rag-v1",
             retrieval_version="postgres-russian-v1",
@@ -258,7 +264,7 @@ class AnalysisAgent:
                     title=work.news.title,
                     url=work.news.source_url,
                     kind="news",
-                    published_on=work.news.published_at.date(),
+                    published_on=work.news.published_at.astimezone(NEWS_TIMEZONE).date(),
                     excerpt=news_text,
                 ),
                 "text": news_text,
@@ -281,7 +287,8 @@ class AnalysisAgent:
             "news_id": str(work.news.news_id),
             "company_id": work.context.company_id,
             "company_features": features,
-            "today": datetime.now(UTC).date().isoformat(),
+            "today": datetime.now(NEWS_TIMEZONE).date().isoformat(),
+            "news_published_at": work.news.published_at.isoformat(),
         }
         issues = []
         result = None
@@ -294,14 +301,15 @@ class AnalysisAgent:
                     ANALYSIS_INSTRUCTION, payload, AnalysisDraft
                 )
                 result = self.validate_result(draft, work, sources, features, passages)
-            except ValueError:
+            except ValueError as error:
                 trace.append(
                     {"step": "validation", "attempt": attempt + 1, "valid": False}
                 )
                 if attempt:
                     raise
                 issues = [
-                    "Проверь схему, company_feature_refs, условия рисков и возможностей, evidence_ids должны указывать на passages своего источника"
+                    "Исправь ошибку структуры: " + str(error)[:1200],
+                    "Если подтверждённого вывода для раздела нет, верни пустой список и укажи ограничение",
                 ]
                 continue
             review = await self.client.ask(
@@ -328,6 +336,7 @@ class AnalysisAgent:
             issues = review.issues or [
                 "Недостаточно подтверждений, убери недоказанные выводы"
             ]
+            payload["previous_draft"] = draft.model_dump(mode="json")
             if attempt == 0:
                 await self.search(review.queries, sources, trace)
         if not supported:
@@ -336,7 +345,7 @@ class AnalysisAgent:
         limitations = []
         if result.bank_position is None:
             limitations.append("Подтверждённая позиция банка по событию не найдена")
-        if any(s["reference"].kind == "bank_report" for s in sources.values()):
+        if any(s.kind == "bank_report" for s in result.source_refs):
             limitations.append(
                 "Отчёты распознаны из PDF, при использовании чисел необходимо сверить исходную страницу"
             )
@@ -350,7 +359,7 @@ class AnalysisAgent:
             trace=trace,
         )
 
-    async def answer(self, analysis, history, question):
+    async def answer(self, analysis, history, question, *, context=None):
         """отвечает по сохранённому разбору и его источникам без смены компании"""
         sources = {}
         for ref in analysis.result.source_refs:
@@ -373,6 +382,10 @@ class AnalysisAgent:
             )
             for key in statement.company_feature_refs
         }
+        if context is not None:
+            if context.company_id != analysis.result.company_id:
+                raise ValueError("Answer context belongs to another company")
+            feature_keys = company_features(context.payload_json)
         source_payload, passages = prepare_evidence(sources)
         payload = {
             "analysis": analysis.result.model_dump(
@@ -380,6 +393,7 @@ class AnalysisAgent:
             ),
             "question": question,
             "company_feature_keys": sorted(feature_keys),
+            "company_features": feature_keys if context is not None else {},
             "history": [{"question": h.question, "answer": h.answer} for h in history],
             "sources": source_payload,
         }

@@ -89,7 +89,7 @@ def database():
             )
         ]
         trigger = re.search(
-            r"CREATE TRIGGER trg_reaction_totals.*?;", sql, re.S
+            r"CREATE TRIGGER trg_reaction_totals.*?;", sql, re.DOTALL
         ).group()
         with engine.begin() as connection:
             with connection.connection.driver_connection.cursor() as cursor:
@@ -128,7 +128,12 @@ def test_news_bundle_restore_and_validation(services, tmp_path):
     bundle = json.loads(DEFAULT_FILE.read_text(encoding="utf-8"))
     bundle["items"] = bundle["items"][:2]
     for row in bundle["items"]:
-        for key in ("features", "tagging_version", "content_hash", "features_published_at"):
+        for key in (
+            "features",
+            "tagging_version",
+            "content_hash",
+            "features_published_at",
+        ):
             row.pop(key, None)
     path = tmp_path / "examples.json"
     path.write_text(json.dumps(bundle, ensure_ascii=False), encoding="utf-8")
@@ -158,6 +163,16 @@ def test_news_bundle_restore_and_validation(services, tmp_path):
     assert news.get_news(restored[0]).features.news_id == restored[0]
     assert news.get_news(restored[0]).tagging_status == "ready"
 
+    saved_bundle["items"][0]["features"]["business_scope"] = "general"
+    saved_bundle["items"][0]["features"]["business_relevance"] = 0.9
+    saved_bundle["items"][0]["tagging_version"] = "updated-context"
+    path.write_text(json.dumps(saved_bundle), encoding="utf-8")
+    import_bundle(
+        path, limit=1, refresh_features=True, news_service=news, tagger=tagger
+    )
+    assert news.get_news(restored[0]).features.business_relevance == 0.9
+    assert news.get_news(restored[0]).tagging_version == "updated-context"
+    assert tagger.tag.call_count == 1
     saved_bundle["items"][0]["article"]["body"] += " changed"
     path.write_text(json.dumps(saved_bundle), encoding="utf-8")
     with pytest.raises(ValueError, match="do not match"):
@@ -300,9 +315,9 @@ def test_truncated_response_is_not_retried():
                 transport=httpx.MockTransport(respond), **kwargs
             ),
         ),
+        pytest.raises(RuntimeError, match="finish"),
     ):
-        with pytest.raises(RuntimeError, match="finish"):
-            asyncio.run(client.ask("План", {}, SearchPlan))
+        asyncio.run(client.ask("План", {}, SearchPlan))
     assert len(calls) == 1 and calls[0]["reasoning_effort"] == "low"
     assert runtime.finish_call.call_args.args[1] == "failed"
 
@@ -380,7 +395,7 @@ class FixtureTransport:
         return AnalysisDraft(
             facts=[evidence],
             why_important=[
-                evidence.model_copy(update={"company_feature_refs": ["industry"]})
+                {**evidence.model_dump(), "company_feature_refs": ["industry"]}
             ],
             risks=[],
             opportunities=[],
@@ -417,7 +432,7 @@ def test_review_with_passage_ids_still_controls_publication(corrected):
             title="Стоимость перевозок выросла",
             text="Перевозки дорожают, поэтому необходимо проверять транспортные расходы компании",
             source_url="https://example.org/news",
-            published_at=datetime.now(UTC),
+            published_at=datetime(2026, 10, 22, 21, tzinfo=UTC),
         ),
         context=SimpleNamespace(
             id=uuid4(), company_id="test", payload_json={"industry": "Перевозки"}
@@ -434,6 +449,67 @@ def test_review_with_passage_ids_still_controls_publication(corrected):
         with pytest.raises(ValueError, match="verification failed"):
             asyncio.run(agent.analyze(work))
     assert len(reviews) == 2 and fixture.calls == 5
+    assert reviews[0]["sources"][0]["published_on"] == "2026-10-23"
+    assert reviews[1]["previous_draft"] == reviews[0]["result"]
+
+
+def test_analysis_schema_rejects_unlinked_company_claims_and_unconditional_risks():
+    """схема для модели требует признаки компании и условия сценариев до проверки цитат"""
+    statement = {"text": "Подтверждённый факт", "evidence_ids": {"news:one": ["e1"]}}
+    for section in ("why_important", "risks", "opportunities"):
+        with pytest.raises(ValueError):
+            AnalysisDraft.model_validate({"facts": [statement], section: [statement]})
+    assert AnalysisDraft.model_validate({"facts": [statement]}).why_important == []
+
+
+def test_followup_receives_saved_company_values():
+    """передаёт в уточнение значения снимка компании, а не только названия полей"""
+    captured = []
+    fixture = FixtureTransport()
+
+    async def transport(messages, schema):
+        captured.append(json.loads(messages[-1]["content"]))
+        return await fixture(messages, schema)
+
+    agent = AnalysisAgent(client=JsonClient(transport=transport))
+    from app.schemas.insights import InsightResult
+
+    analysis = SimpleNamespace(
+        result=InsightResult(
+            company_id="test",
+            news_id=uuid4(),
+            facts=[],
+            why_important=[],
+            risks=[],
+            opportunities=[],
+            recommendations=[],
+            bank_position=None,
+            limitations=[],
+            source_refs=[
+                SourceReference(
+                    id="news:one",
+                    kind="news",
+                    title="Новость",
+                    excerpt="Подтверждённый текст исходной новости для уточнения",
+                )
+            ],
+        )
+    )
+    context = SimpleNamespace(
+        company_id="test",
+        payload_json={
+            "industry": "Перевозки на момент разбора",
+            "revenue": "12000",
+            "profile_json": {"CL_PRODUCT_LOA_MARK": "0.0"},
+        },
+    )
+    asyncio.run(agent.answer(analysis, [], "Какая выручка?", context=context))
+    for payload in captured:
+        assert payload["company_features"] == {
+            "industry": "Перевозки на момент разбора",
+            "revenue": "12000",
+            "CL_PRODUCT_LOA_MARK": "0.0",
+        }
 
 
 def test_api_and_worker_cycle(services):
@@ -484,7 +560,6 @@ def test_api_and_worker_cycle(services):
             "/api/auth/demo",
             json={
                 "company_id": "demo-api-company",
-                "city": "Москва",
                 "job_role": "cfo",
             },
         )
@@ -494,6 +569,17 @@ def test_api_and_worker_cycle(services):
             client.get("/api/companies", params={"query": "demo-api"}).json()[0]["id"]
             == "demo-api-company"
         )
+        assert session.json()["user"]["city"] == ""
+        updated = client.put("/api/profile/settings", json={"job_role": "cfo"})
+        assert updated.status_code == 200
+        assert updated.json()["city"] == ""
+        updated = client.put(
+            "/api/profile/settings", json={"city": "Казань", "job_role": "cfo"}
+        )
+        assert updated.status_code == 200
+        updated = client.put("/api/profile/settings", json={"job_role": "cfo"})
+        assert updated.status_code == 200
+        assert updated.json()["city"] == "Казань"
         page = client.post("/api/feed", json={"page_size": 1}).json()
         assert page["generated_at"] and page["expires_at"] and page["has_more"]
         news_id = page["items"][0]["ranking"]["news_id"]
@@ -713,6 +799,9 @@ def test_training_signals_use_snapshot_and_do_not_duplicate_content(services):
         features = details["training_features"]
         assert set(features) == {
             "schema_version",
+            "business_scope",
+            "business_relevance",
+            "geography",
             "content_hash",
             "tagging_version",
             "synthetic",
@@ -746,6 +835,77 @@ def test_training_signals_use_snapshot_and_do_not_duplicate_content(services):
         assert payload == {}
 
 
+def test_feed_preserves_geography_and_reads_old_snapshots(services):
+    """сохраняет географический бонус и читает снимки без новых полей"""
+    from app.schemas.services import IncomingNews, Interests
+
+    s = services
+    s["news"].sync_tag_catalog()
+    s["profiles"].save_company(
+        CompanyData(id="geo-company", profile_version="one", city="г. Сочи")
+    )
+    session = s["profiles"].register_demo(
+        Registration(company_id="geo-company", city="Москва")
+    )
+    s["profiles"].set_interests(
+        session.user.id, Interests(personal=["biz_agr"], disabled=[])
+    )
+    s["news"].register_source("geo-test", kind="test")
+    article = s["news"].save_news(
+        IncomingNews(
+            source="geo-test",
+            url="https://example.com/geo-test",
+            title="Сельское хозяйство края",
+            body="Новость о сельском хозяйстве Краснодарского края",
+            published_at=datetime.now(UTC),
+        )
+    )
+    s["news"].save_features(
+        NewsFeatures(
+            news_id=article.news_id,
+            tags=[NewsTag(id="biz_agr", confidence=1)],
+            geography=Geography(region_codes=["reg_23"]),
+        ),
+        version="test-geo",
+        expected_content_hash=article.content_hash,
+        expected_published_at=article.published_at,
+    )
+    with s["uow"]() as db:
+        db._session.execute(
+            text(
+                "UPDATE news SET extracted_features = extracted_features #- '{geography,city_codes}' WHERE id=:id"
+            ),
+            {"id": article.news_id},
+        )
+        db.commit()
+    page = s["feed"].create_feed(session.user.id, page_size=100)
+    item = next(row for row in page.items if row.ranking.news_id == article.news_id)
+    assert item.ranking.geography_score == 0.5
+    assert item.ranking.geography_bonus > 0
+    assert "Краснодарский край" in item.ranking.geography_reason
+    assert item.ranking.ranking_version == "formula-v3-business-context"
+    with s["uow"]() as db:
+        snapshot = db._session.execute(
+            text("SELECT preference_context_json FROM feed_snapshots WHERE id=:id"),
+            {"id": page.snapshot_id},
+        ).scalar_one()
+        assert snapshot["registered_region_code"] == "reg_23"
+        assert snapshot["operating_region_codes"] is None
+        db._session.execute(
+            text(
+                "UPDATE feed_snapshot_items SET ranking_details = ranking_details - 'geography_score' - 'geography_bonus' - 'geography_reason' - 'ranking_version' WHERE snapshot_id=:id"
+            ),
+            {"id": page.snapshot_id},
+        )
+        db.commit()
+    old_page = s["feed"].get_page(session.user.id, page.snapshot_id, limit=100)
+    old_item = next(
+        row for row in old_page.items if row.ranking.news_id == article.news_id
+    )
+    assert old_item.ranking.geography_score is None
+    assert old_item.ranking.ranking_version is None
+
+
 def test_failed_analysis_does_not_publish_result(services):
     """таймаут агента завершает задание ошибкой без сохранённого AI-разбора"""
     s = services
@@ -769,3 +929,152 @@ def test_failed_analysis_does_not_publish_result(services):
     saved = s["insights"].get_job(session.user.id, job.id)
     assert saved.status == "failed" and saved.error_code == "analysis_timeout"
     assert saved.analysis_id is None
+
+
+def test_demo_company_selection_and_search(services):
+    """проверяет поиск внутри выбранных 50 компаний и сохранность полного каталога"""
+    from app.services.profiles import demo_company_ids
+
+    ids = demo_company_ids()
+    assert len(ids) == len(set(ids)) == 50
+    profile = services["profiles"]
+    for index, company_id in enumerate(ids):
+        profile.save_company(
+            CompanyData(
+                id=company_id,
+                profile_version="catalog-test",
+                industry="Перевозки" if index == 0 else "Торговля",
+                city="Казань",
+                region="Татарстан",
+                okved_code="49.41",
+            )
+        )
+    profile.save_company(
+        CompanyData(
+            id="outside-catalog",
+            profile_version="catalog-test",
+            industry="Перевозки",
+        )
+    )
+    app = create_app(ApiSettings(_env_file=None))
+    app.dependency_overrides[dependencies.get_profile_service] = lambda: profile
+    with TestClient(app) as client:
+        response = client.get("/api/companies", params={"demo_selection": True})
+        assert response.status_code == 200
+        assert {c["id"] for c in response.json()} == set(ids)
+        for query in ["перевозки", ids[0].lower()]:
+            rows = client.get(
+                "/api/companies",
+                params={
+                    "demo_selection": True,
+                    "query": query,
+                },
+            ).json()
+            assert ids[0] in {c["id"] for c in rows}
+            assert "outside-catalog" not in {c["id"] for c in rows}
+        for query in ["КАЗАНЬ", "Татарстан", "49.41"]:
+            assert (
+                len(
+                    client.get(
+                        "/api/companies",
+                        params={
+                            "demo_selection": True,
+                            "query": query,
+                        },
+                    ).json()
+                )
+                == 50
+            )
+        assert (
+            client.get(
+                "/api/companies",
+                params={
+                    "demo_selection": True,
+                    "query": "%",
+                },
+            ).json()
+            == []
+        )
+        assert (
+            client.get(
+                "/api/companies",
+                params={
+                    "query": "outside-catalog",
+                },
+            ).json()[0]["id"]
+            == "outside-catalog"
+        )
+
+
+def test_company_topics_are_initialized_without_llm(services):
+    """вход и смена компании заполняют пустые темы, повторный вызов сохраняет ручные настройки"""
+    from app.schemas.database import CompanyTagInput
+
+    services["news"].sync_tag_catalog()
+    profiles = services["profiles"]
+    companies = [
+        CompanyData(id="topics-it", profile_version="1", okved_code="62.01"),
+        CompanyData(id="topics-freight", profile_version="1", okved_code="49.4"),
+    ]
+    for company in companies:
+        profiles.save_company(company)
+    session = profiles.register_demo(
+        Registration(company_id=companies[0].id, job_role="ceo")
+    )
+    first = profiles.get_profile(session.user.id)
+    assert {t.tag_id for t in first.company_tags} == {"biz_it", "biz_software"}
+    second = profiles.switch_company(session.user.id, companies[1].id)
+    assert {t.tag_id for t in second.company_tags} == {"biz_logistic", "biz_freight"}
+    assert not profiles.ensure_company_topics(companies[1].id)
+    manual = CompanyTagInput(tag_id="biz_tax", origin="manual", base_weight=1.8)
+    profiles.set_company_tags(companies[0].id, [manual])
+    assert not profiles.ensure_company_topics(companies[0].id)
+    assert profiles.switch_company(session.user.id, companies[0].id).company_tags == [
+        manual
+    ]
+    imported = CompanyData(id="topics-import", profile_version="1", okved_code="55.10")
+    assert profiles.create_companies([imported]) == [imported.id]
+    assert not profiles.ensure_company_topics(imported.id)
+
+
+def test_real_company_feed_excludes_demo_sources(services):
+    """одинаковые темы не переносят демонстрационные публикации в обычную ленту"""
+    from app.schemas.database import CompanyTagInput
+    from app.schemas.services import IncomingNews
+
+    s = services
+    create_demo_data(s["profiles"], s["news"])
+    company = CompanyData(id="real-feed-check", profile_version="one")
+    s["profiles"].save_company(company)
+    s["profiles"].set_company_tags(
+        company.id,
+        [
+            CompanyTagInput(
+                tag_id="demo-api-logistics",
+                origin="manual",
+                base_weight=1,
+            )
+        ],
+    )
+    session = s["profiles"].register_demo(Registration(company_id=company.id))
+    s["news"].register_source("real-feed-check", kind="test")
+    article = s["news"].save_news(
+        IncomingNews(
+            source="real-feed-check",
+            url="https://example.org/real-feed-check",
+            title="Проверка источника",
+            body="Публикация другого источника",
+            published_at=datetime.now(UTC),
+        )
+    )
+    s["news"].save_features(
+        NewsFeatures(
+            news_id=article.news_id,
+            tags=[NewsTag(id="demo-api-logistics", confidence=1)],
+            geography=Geography(),
+        ),
+        version="test",
+        expected_content_hash=article.content_hash,
+    )
+    feed = s["feed"].create_feed(session.user.id)
+    assert [item.ranking.news_id for item in feed.items] == [article.news_id]

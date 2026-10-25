@@ -31,7 +31,7 @@ from app.schemas.database import CompanyData, CompanyTagInput
 
 Создаёт пользователя и сессию; каждый вызов создаёт нового пользователя
 
-- `data`: `company_id` существующей компании, `city`, `job_role="other"`
+- `data`: `company_id` существующей компании, `job_role="other"`; `city` необязателен
 - `job_role`: `ceo`, `cfo`, `accountant`, `treasury`, `employee` или `other`
 - `session_hours`: срок сессии в часах, от 1 до 720
 - Результат: `user`, `token`, `expires_at`; строка токена доступна через `token.get_secret_value()`
@@ -58,7 +58,7 @@ from app.schemas.database import CompanyData, CompanyTagInput
 
 Изменяет настройки пользователя и возвращает обновлённые данные
 
-- `settings`: обязательные `city` и `job_role`
+- `settings`: обязательный `job_role`; `city` передаётся только для изменения города пользователя
 - Права доступа этим методом не меняются
 
 ### `set_interests(user_id: UUID, settings: Interests) -> ProfileInputs`
@@ -442,3 +442,7 @@ from app.schemas.insights import InsightResult, SourceReference
 - `RuntimeService.get(key)`: последнее состояние фонового процесса; импорт `from app.services.runtime import RuntimeService`
 
 Ключи состояний для чтения: `worker`, `market`, `llm_budget`. Запись служебных состояний выполняется воркером и клиентами LLM.
+
+### `ProfileService.ensure_company_topics(company_id)`
+
+Добавляет начальные темы по ОКВЭД, только если у компании ещё нет тем. Возвращает `True`, если темы сохранены, иначе `False`. Модель не вызывается. Неизвестная компания вызывает `LookupError`, неизвестный ОКВЭД остаётся без автоматических тем.

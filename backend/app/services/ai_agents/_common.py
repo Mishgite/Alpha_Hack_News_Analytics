@@ -66,6 +66,8 @@ SAFETY = """Ты классификатор новостей и деятельн
 Города и регионы не являются тематическими тегами
 Географию укажи отдельно: country_code как ISO-код страны, region_codes как
 точные коды из region, nationwide как true/false или null при неизвестности
+Если город события явно известен, добавь его код из справочника в city_codes
+Город связывай с регионом через справочник, не приравнивай Москву к Московской области
 Не угадывай страну по принадлежности к справочнику и не делай выводов о суверенитете
 Не подменяй регион деятельности адресом редакции, регистрации или контрагента
 Если география неизвестна, оставь country_code=null, region_codes=[], nationwide=null
@@ -112,6 +114,23 @@ def validate_features(result, catalog):
         catalog["region"].values()
     ):
         raise ValueError("Unknown or duplicate region code")
+    cities = result.geography.city_codes
+    if len(cities) != len(set(cities)) or set(cities) - set(catalog["city"].values()):
+        raise ValueError("Unknown or duplicate city code")
+    return result
+
+
+def normalize_city_codes(result, catalog):
+    """удаляет неизвестные коды необязательных городов, сохраняя темы и известные регионы"""
+    allowed = set(catalog["city"].values())
+    cities = result.geography.city_codes
+    normalized = list(dict.fromkeys(code for code in cities if code in allowed))
+    if normalized != cities:
+        logger.warning(
+            "Discarded invalid or duplicate optional city codes: %s",
+            len(cities) - len(normalized),
+        )
+        result.geography.city_codes = normalized
     return result
 
 

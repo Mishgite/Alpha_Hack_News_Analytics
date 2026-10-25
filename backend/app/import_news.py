@@ -49,7 +49,13 @@ def read_bundle(path):
 
 
 def import_bundle(
-    path=DEFAULT_FILE, *, limit=None, tag=False, news_service=None, tagger=None
+    path=DEFAULT_FILE,
+    *,
+    limit=None,
+    tag=False,
+    refresh_features=False,
+    news_service=None,
+    tagger=None,
 ):
     """сохраняет выбранные новости, восстанавливает признаки и при tag размечает только pending"""
     if limit is not None and limit < 1:
@@ -62,7 +68,9 @@ def import_bundle(
         article = IncomingNews.model_validate(row["article"])
         news.register_source(article.source, kind="curated_summary")
         saved = news.save_news(article)
-        if saved.tagging_status != "ready":
+        if saved.tagging_status != "ready" or (
+            refresh_features and row.get("features") is not None
+        ):
             if row.get("features") is not None:
                 features = NewsFeatures(news_id=saved.news_id, **row["features"])
                 version = row["tagging_version"]
@@ -112,12 +120,22 @@ def main():
     parser.add_argument("--file", type=Path, default=DEFAULT_FILE)
     parser.add_argument("--limit", type=int)
     parser.add_argument(
+        "--refresh-features",
+        action="store_true",
+        help="replace saved features with the verified bundle without model calls",
+    )
+    parser.add_argument(
         "--tag",
         action="store_true",
         help="tag pending examples and save features to JSON",
     )
     args = parser.parse_args()
-    ids = import_bundle(args.file, limit=args.limit, tag=args.tag)
+    ids = import_bundle(
+        args.file,
+        limit=args.limit,
+        tag=args.tag,
+        refresh_features=args.refresh_features,
+    )
     print(f"Imported: {len(ids)}")
 
 

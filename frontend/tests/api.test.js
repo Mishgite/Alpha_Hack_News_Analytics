@@ -17,6 +17,31 @@ const json = (data, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+for (const oldRequest of ["/api/profile", "/api/auth/logout"]) {
+  test(`запоздавший ответ ${oldRequest} не удаляет новую сессию`, async () => {
+    let finishOld;
+    let token = "old";
+    const client = createHttpClient({
+      baseUrl: "https://api.example", storage: storage(),
+      fetcher: async (url, options) => {
+        if (url.endsWith("/api/auth/demo")) return json({access_token: token, expires_at: new Date(Date.now() + 60000).toISOString()});
+        if (options.headers.Authorization === "Bearer old") return new Promise(resolve => { finishOld = resolve; });
+        assert.equal(options.headers.Authorization, "Bearer new");
+        return json({company_id: "new-company"});
+      },
+    });
+    await client.request("POST", "/api/auth/demo", {});
+    const pending = client.request(oldRequest.endsWith("logout") ? "POST" : "GET", oldRequest);
+    token = "new";
+    await client.request("POST", "/api/auth/demo", {});
+    finishOld(oldRequest.endsWith("logout") ? new Response(null, {status: 204}) : json({detail: "expired"}, 401));
+    if (oldRequest.endsWith("logout")) await pending;
+    else await assert.rejects(pending, {status: 401});
+    assert.equal(client.hasSession(), true);
+    assert.equal((await client.request("GET", "/api/profile")).company_id, "new-company");
+  });
+}
+
 test("сессия передаётся в Bearer, 401 удаляет её, logout принимает пустой ответ", async () => {
   const saved = storage();
   const requests = [];
@@ -55,15 +80,15 @@ test("ошибка FastAPI и HTML вместо JSON не становятся �
     storage: storage(),
     fetcher: async () => response,
   });
-  await assert.rejects(client.request("POST", "/api/auth/demo", {}), /city/);
+  await assert.rejects(client.request("POST", "/api/auth/demo", {}), /город проживания/);
   response = new Response("<html>proxy error</html>", {
     headers: { "Content-Type": "text/html" },
   });
-  await assert.rejects(client.request("GET", "/api/profile"), /некорректный/);
+  await assert.rejects(client.request("GET", "/api/profile"), /Не удалось загрузить данные/);
   response = json({ detail: "Analysis worker unavailable" }, 503);
   await assert.rejects(
     client.request("POST", "/api/news/id/analysis", {}),
-    /обработчик/,
+    /Разбор временно недоступен/,
   );
 });
 

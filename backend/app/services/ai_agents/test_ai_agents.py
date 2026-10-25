@@ -108,6 +108,24 @@ class TaggerTests(TaggerFixtures):
         with self.assertRaises(ValidationError):
             self.tagger({**OUTPUT, "news_id": str(uuid4())}).tag(self.news)
 
+    def test_optional_unknown_city_does_not_discard_valid_region_and_topics(self):
+        """ошибка необязательного города не теряет известный регион и деловые признаки"""
+        output = {
+            **OUTPUT,
+            "business_scope": "organization",
+            "business_relevance": 0.25,
+            "geography": {
+                **OUTPUT["geography"],
+                "city_codes": ["unknown", "mos", "mos"],
+            },
+        }
+        with self.assertLogs("app.services.ai_agents._common", level="WARNING"):
+            result = self.tagger(output).tag(self.news)
+        self.assertEqual(result.geography.city_codes, ["mos"])
+        self.assertEqual(result.geography.region_codes, ["reg_77"])
+        self.assertEqual(result.tags[0].id, "biz_it")
+        self.assertEqual(result.business_relevance, 0.25)
+
     def test_invalid_outputs_rejected(self):
         for tags in [
             ["biz_it"],

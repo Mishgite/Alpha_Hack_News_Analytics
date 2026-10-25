@@ -19,14 +19,28 @@ class DraftStatement(BaseModel):
     )
 
 
+class CompanyStatement(DraftStatement):
+    """связывает вывод о компании хотя бы с одним переданным признаком"""
+
+    company_feature_refs: list[str] = Field(min_length=1, max_length=6)
+
+
+class ConditionalStatement(DraftStatement):
+    """требует условие, при котором возможен риск или возможность"""
+
+    condition: str = Field(min_length=1, max_length=300)
+
+
 class AnalysisDraft(BaseModel):
     """принимает только выводы модели, ID и метаданные источников добавляет сервер"""
 
     model_config = ConfigDict(extra="forbid")
     facts: list[DraftStatement] = Field(min_length=1, max_length=3)
-    why_important: list[DraftStatement] = Field(default_factory=list, max_length=2)
-    risks: list[DraftStatement] = Field(default_factory=list, max_length=2)
-    opportunities: list[DraftStatement] = Field(default_factory=list, max_length=2)
+    why_important: list[CompanyStatement] = Field(default_factory=list, max_length=2)
+    risks: list[ConditionalStatement] = Field(default_factory=list, max_length=2)
+    opportunities: list[ConditionalStatement] = Field(
+        default_factory=list, max_length=2
+    )
     recommendations: list[DraftStatement] = Field(default_factory=list, max_length=2)
     bank_position: DraftStatement | None = None
     limitations: list[str] = Field(default_factory=list, max_length=8)

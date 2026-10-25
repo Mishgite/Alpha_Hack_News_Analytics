@@ -37,17 +37,17 @@ class ServiceInput(BaseModel):
 
 
 class Registration(ServiceInput):
-    """данные деморегистрации: существующая компания, город и должность пользователя"""
+    """компания и должность для демовхода, город пользователя можно не передавать"""
 
     company_id: str = Field(min_length=1, max_length=200)
-    city: str = Field(min_length=1, max_length=200)
+    city: str = Field(default="", max_length=200)
     job_role: JobRole = "other"
 
 
 class UserSettings(ServiceInput):
-    """город и должность, которые пользователь может изменить"""
+    """должность пользователя и необязательное обновление его города"""
 
-    city: str = Field(min_length=1, max_length=200)
+    city: str = Field(default="", max_length=200)
     job_role: JobRole
 
 

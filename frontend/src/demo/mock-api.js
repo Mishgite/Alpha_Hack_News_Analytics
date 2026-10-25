@@ -1,3 +1,4 @@
+import { UserError } from "../api/errors.js";
 import { seedStories, detailText } from "./data.js";
 import samplePdf from "../../assets/sample-report.pdf?url";
 export const demo = (() => {
@@ -162,7 +163,7 @@ export const demo = (() => {
     } catch {}
   };
   const error = (status, detail) =>
-    Object.assign(new Error(detail), { status });
+    new UserError(detail, status);
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const profile = () => ({
     user: { ...user },
@@ -351,22 +352,21 @@ export const demo = (() => {
       q = url.searchParams;
     if (p === "/api/companies")
       return companies.filter((c) =>
-        [c.id, c.industry, c.city]
+        [c.id, c.industry, c.okved_code, c.okved_name, c.city, c.region]
           .join(" ")
           .toLowerCase()
-          .includes((q.get("query") || "").toLowerCase()),
+          .includes((q.get("query") || "").trim().toLowerCase()),
       );
     if (p === "/api/auth/demo") {
       if (
         !companies.some((c) => c.id === body.company_id) ||
-        !body.city?.trim() ||
         !roles[body.job_role]
       )
-        throw error(422, "Укажите компанию, город и роль");
+        throw error(422, "Укажите компанию и роль");
       user = {
         id: uid(100),
         company_id: body.company_id,
-        city: body.city.trim(),
+        city: body.city?.trim() || "",
         job_role: body.job_role,
         access_role: "user",
       };
@@ -535,7 +535,7 @@ export const demo = (() => {
             "Лимит AI-разборов на сегодня исчерпан. Новости и готовые разборы доступны",
           );
         if (scenario === "network")
-          throw error(503, "Сервис разбора временно недоступен");
+          throw error(503, "Разбор временно недоступен. Попробуйте позже");
         const key = user.company_id + ":" + body.idempotency_key;
         if (jobs.has(key)) return jobs.get(key);
         const cached = [...analyses.values()].find(
@@ -595,7 +595,7 @@ export const demo = (() => {
     if (p.startsWith("/api/analysis-jobs/")) {
       const j = jobs.get(p.split("/").pop());
       if (!j || j.company_id !== user.company_id)
-        throw error(404, "Задание не найдено");
+        throw error(404, "Разбор больше недоступен");
       return { ...j };
     }
     if (p.startsWith("/api/analyses/")) {
@@ -641,7 +641,7 @@ export const demo = (() => {
     if (p.startsWith("/api/report-chunks/")) {
       if (p.endsWith("/document")) {
         const response = await fetch(samplePdf);
-        if (!response.ok) throw error(404, "Учебный PDF не найден");
+        if (!response.ok) throw error(404, "Документ недоступен");
         return response.blob();
       }
       return {
@@ -707,7 +707,7 @@ export const demo = (() => {
                 .map(({ size_metric, color_metric, ...quote }) => quote),
       };
     }
-    throw error(404, "Операция не найдена");
+    throw error(404, "Не удалось выполнить действие");
   }
   return {
     request,

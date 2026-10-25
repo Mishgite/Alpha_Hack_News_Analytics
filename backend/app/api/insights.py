@@ -9,9 +9,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from app.schemas.api import AnalysisRequest, QuestionRequest
-from app.schemas.database import AnalysisData, ContextData, JobData, QuestionData, UserData
+from app.schemas.database import (
+    AnalysisData,
+    ContextData,
+    JobData,
+    QuestionData,
+    UserData,
+)
 from app.services import InsightService
 from app.services.questions import QuestionService
+from app.services.ranking import RANKING_VERSION
 from app.services.reports import ReportService
 from app.services.runtime import RuntimeService
 
@@ -179,7 +186,7 @@ def get_processing_status(
         "database": "ready",
         "worker_alive": alive,
         "analysis_available": bool(alive and state["value"].get("analysis_enabled")),
-        "ranking": "formula-v1",
+        "ranking": RANKING_VERSION,
         "market": runtime.get("market"),
         "llm_budget": runtime.get("llm_budget"),
     }

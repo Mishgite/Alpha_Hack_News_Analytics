@@ -108,9 +108,19 @@ class FeedRepository:
                     ranking_details={
                         "reason": item.reason,
                         "matched_signals": item.matched_signals,
+                        "ranking_version": result.version,
+                        "geography_score": item.geography_score,
+                        "geography_bonus": item.geography_bonus,
+                        "geography_factor": item.geography_factor,
+                        "geography_reason": item.geography_reason,
                         # признаки фиксируются до реакции, чтобы обучение не читало будущие изменения
                         "training_features": {
-                            "schema_version": 1,
+                            "schema_version": 3,
+                            "business_scope": features.get("business_scope", "unknown"),
+                            "business_relevance": features.get(
+                                "business_relevance", 0.5
+                            ),
+                            "geography": features.get("geography", {}),
                             "content_hash": article.content_hash,
                             "tagging_version": article.tagging_version,
                             "synthetic": bool(

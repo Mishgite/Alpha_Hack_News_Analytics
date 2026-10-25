@@ -23,12 +23,15 @@ def list_companies(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     query: str = Query("", max_length=150),
+    demo_selection: bool = False,
     service: ProfileService = Depends(get_profile_service),
 ):
     """возвращает компании для демовхода, без утверждения реальных банковских прав"""
     if not request.app.state.settings.demo_enabled:
         raise HTTPException(403, "Demo company catalogue is disabled")
-    return service.list_companies(limit=limit, offset=offset, query=query)
+    return service.list_companies(
+        limit=limit, offset=offset, query=query, demo_selection=demo_selection
+    )
 
 
 @router.post("/auth/demo", response_model=SessionResponse, status_code=201)

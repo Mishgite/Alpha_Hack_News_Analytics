@@ -206,7 +206,7 @@ class NewsRepository:
                 row is None
                 or row.tagging_status != "ready"
                 or row.published_at != item.published_at
-                or row.extracted_features != item.features.model_dump(mode="json")
+                or NewsFeatures.model_validate(row.extracted_features) != item.features
             ):
                 raise ValueError("News features changed; rebuild the feed")
         weights = {}
@@ -352,7 +352,12 @@ class NewsRepository:
         return self._dto(row)
 
     def list_candidates(
-        self, *, since: datetime, as_of: datetime, limit: int = 500
+        self,
+        *,
+        since: datetime,
+        as_of: datetime,
+        limit: int = 500,
+        include_demo: bool = False,
     ) -> list[NewsCandidate]:
         """возвращает размеченные новости от новых к старым
 
@@ -374,6 +379,11 @@ class NewsRepository:
                     News.published_at >= since,
                     News.published_at <= as_of,
                     News.fetched_at <= as_of,
+                    True
+                    if include_demo
+                    else News.canonical_source.not_in(
+                        select(NewsSource.code).where(NewsSource.kind == "demo")
+                    ),
                 )
                 .order_by(News.published_at.desc(), News.id.desc())
                 .limit(limit)

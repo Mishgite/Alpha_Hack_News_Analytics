@@ -12,6 +12,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.exc import TimeoutError as PoolTimeout
 
+from app.services.ranking import RANKING_VERSION
+
 from . import feed, insights, market, profiles
 
 logger = logging.getLogger(__name__)
@@ -124,7 +126,7 @@ def create_app(settings: ApiSettings | None = None) -> FastAPI:
         """подтверждает работу HTTP-сервера, состояние БД этот метод не проверяет"""
         return {
             "status": "ok",
-            "ranking": "formula-v1",
+            "ranking": RANKING_VERSION,
             "ai_analysis": "worker_required",
         }
 

@@ -12,7 +12,7 @@ from app.services import (
     ProfileService,
 )
 from app.services.profile_policy import default_policy
-from app.services.ranking import rank_news
+from app.services.ranking import RANKING_VERSION, rank_news
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -32,8 +32,8 @@ def get_feed_service() -> FeedService:
     return FeedService(
         ranker=rank_news,
         policy=default_policy(),
-        ranking_config_version="formula-v1",
-        feature_schema_version="news-features-v2",
+        ranking_config_version=RANKING_VERSION,
+        feature_schema_version="news-features-v4",
     )
 
 

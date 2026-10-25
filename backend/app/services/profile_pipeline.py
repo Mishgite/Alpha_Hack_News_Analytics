@@ -9,6 +9,7 @@ from app.schemas.database import CompanyTagInput
 from app.schemas.ranking import Weight
 from app.schemas.tagging import ProfileForTagging, ProfileTags
 
+from .company_topics import initial_company_topics
 from .profiles import ProfileService
 
 
@@ -63,13 +64,14 @@ class ProfilePipeline:
                 text=self._description(company),
             )
         )
-        self.profiles.save_company_tagging(
-            company,
-            [
-                CompanyTagInput(tag_id=tag.id, origin="rule", base_weight=weight)
-                for tag in result.tags
-            ],
-        )
+        topics = {
+            tag.id: CompanyTagInput(tag_id=tag.id, origin="rule", base_weight=weight)
+            for tag in result.tags
+        }
+        for tag in initial_company_topics(company):
+            if tag.tag_id not in topics or topics[tag.tag_id].base_weight < tag.base_weight:
+                topics[tag.tag_id] = tag
+        self.profiles.save_company_tagging(company, list(topics.values()))
         return result
 
     def suggest_interests(self, user_id: UUID) -> ProfileTags:

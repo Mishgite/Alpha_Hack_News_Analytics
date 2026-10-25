@@ -19,6 +19,8 @@ class RankingProfile(BaseModel):
     job_role: JobRole
     # веса уже объединены из интересов компании, должности, настроек и реакций
     tag_weights: dict[str, Weight]
+    company_tag_ids: list[str] = Field(default_factory=list)
+    personal_tag_ids: list[str] = Field(default_factory=list)
     industry_code: str | None = None
     country_code: str | None = None
     registered_region_code: str | None = None
@@ -48,6 +50,11 @@ class RankedNews(BaseModel):
     match_score: Score
     freshness_score: Score
     final_score: Score
+    geography_score: Score | None = None
+    geography_bonus: Score = 0
+    geography_factor: Score = 1
+    geography_reason: str | None = None
+    ranking_version: str | None = None
     matched_signals: list[str] = Field(default_factory=list)
     reason: str
 
