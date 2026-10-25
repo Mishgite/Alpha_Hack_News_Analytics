@@ -2883,3 +2883,26 @@ code {
   .date-options span { padding: 10px 8px; }
   .feed-filters { padding: 16px; }
 }
+
+.interest-section { margin: 24px 0; }
+.interest-section h2 { font-size: 18px; margin-bottom: 8px; }
+.interest-catalog { margin: 12px 0; border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; background: var(--surface); }
+.interest-catalog > summary { min-height: 48px; padding: 14px 0; font-weight: 600; font-size: 14px; }
+.interest-catalog[open] > summary { margin-bottom: 12px; }
+.interest-catalog .searchable-topics { max-height: 330px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; }
+.personal-options label[hidden] { display: none; }
+.drawer.settings-dialog { width: min(420px, calc(100% - 32px)); height: fit-content; max-height: calc(100dvh - 32px); margin: auto; border-radius: 18px; }
+.settings-dialog .dialog-head { padding: 20px; }
+.settings-dialog .dialog-head h2 { font-size: 22px; }
+.settings-dialog .dialog-body { padding: 20px; display: grid; gap: 20px; }
+.settings-link { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.settings-link svg:last-child { margin-left: auto; }
+.data-origin { margin-top: 12px; font-size: 12px; }
+.data-origin summary { color: var(--muted); }
+.data-origin small, .data-origin p { overflow-wrap: anywhere; margin-top: 8px; }
+
+.interests-page > .back-link { margin-bottom: 0; }
+.interests-page > header { margin-top: 12px; }
+.interest-section:first-child { margin-top: 0; }
+.interests-page .topic-options label:has(:checked),
+.interests-page .personal-options label:has(:checked) { border-color: var(--line); background: var(--surface-2); }

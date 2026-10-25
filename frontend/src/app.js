@@ -62,6 +62,7 @@ const tag = (id) => `<span class="tag">${esc(tagName(id))}</span>`;
 const state = {
   profile: null,
   feed: null,
+  feedDays: null,
   days: null,
   analysis: null,
   article: null,
@@ -135,7 +136,7 @@ function toast(text) {
 function panel(title, body) {
   clearTimeout(closeTimer);
   dialog.classList.remove("closing");
-  dialog.classList.remove("demo-dialog", "reason-dialog");
+  dialog.classList.remove("demo-dialog", "reason-dialog", "settings-dialog");
   $("#panel-title").textContent = title;
   $("#panel-body").innerHTML = body;
   if (!dialog.open) {
@@ -173,7 +174,7 @@ function inlineError(form, e) {
   el.textContent = userMessage(e);
 }
 function skeleton() {
-  return `<div class="loading-block" aria-busy="true"><div class="loading-label" role="status"><span class="spinner"></span>Подготавливаем подборку</div>${[0, 1, 2].map(() => '<div class="skeleton-card"><span class="skeleton short"></span><span class="skeleton long"></span><span class="skeleton"></span><span class="skeleton medium"></span></div>').join("")}</div>`;
+  return `<div class="loading-block" aria-busy="true"><div class="loading-label" role="status"><span class="spinner"></span>Загружаем…</div>${[0, 1, 2].map(() => '<div class="skeleton-card"><span class="skeleton short"></span><span class="skeleton long"></span><span class="skeleton"></span><span class="skeleton medium"></span></div>').join("")}</div>`;
 }
 function heading(title, subtitle) {
   return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div></div>`;
@@ -194,10 +195,11 @@ async function home() {
       <a class="market-shortcut" href="#market"><span class="overview-icon">${icon("chart")}</span><h2>Биржевой обзор</h2><p>Котировки и изменения на рынке</p><span class="market-shortcut-link">Смотреть обзор ${icon("arrow")}</span></a>
     </div>`;
   try {
-    if (!state.feed || Date.parse(state.feed.expires_at) <= Date.now()) {
-      const result = await api.request("POST", "/api/feed", { days: state.days ?? 7, page_size: 20 });
+    if (!state.feed || state.feedDays !== 7 || Date.parse(state.feed.expires_at) <= Date.now()) {
+      const result = await api.request("POST", "/api/feed", { days: 7, page_size: 20 });
       if (token !== generation) return;
       state.feed = result;
+      state.feedDays = 7;
     }
     if (token !== generation) return;
     $("#overview-news").innerHTML = state.feed.items.length
@@ -263,8 +265,8 @@ function feedBody() {
   const f = state.feed;
   if (!f) return;
   $("#feed-results").innerHTML = f.items.length
-    ? `<div class="feed-list">${f.items.map(feedCard).join("")}</div><div class="pagination">${f.has_more ? '<button class="button secondary" data-action="more">Показать ещё 20 ' + icon("plus") + "</button>" : "<span>Конец подборки</span>"}<span>Показано ${f.items.length} · Обновлено ${date(f.generated_at)}</span></div>`
-    : `<div class="empty-state">${icon("document")}<h2>${state.days === null ? "Подходящих новостей пока нет" : "За этот период новостей нет"}</h2><p>${(state.days ?? 7) < 30 ? "Попробуйте расширить период подборки" : "Подходящих новостей пока нет. Можно изменить темы или вернуться позже"}</p>${(state.days ?? 7) < 30 ? '<button class="button secondary" data-action="expand-period">Показать за 30 дней</button>' : '<a class="button secondary" href="#interests">Темы подборки</a>'}</div>`;
+    ? `<div class="feed-list">${f.items.map(feedCard).join("")}</div><div class="pagination">${f.has_more ? '<button class="button secondary" data-action="more">Показать ещё 20 ' + icon("plus") + "</button>" : "<span>Конец подборки</span>"}<span>Показано ${f.items.length}</span></div>`
+    : `<div class="empty-state">${icon("document")}<h2>${state.days === null ? "Подходящих новостей пока нет" : "За этот период новостей нет"}</h2><p>${state.days !== null ? "Сбросьте фильтр, чтобы вернуться к обычной подборке" : "Можно посмотреть более ранние публикации"}</p>${state.days !== null ? '<button class="button secondary" data-action="reset-feed-filter">Сбросить фильтр</button>' : '<button class="button secondary" data-action="expand-period">Более ранние новости</button>'}</div>`;
   observeImpressions();
 }
 async function feed(reuse = false) {
@@ -281,6 +283,7 @@ async function feed(reuse = false) {
     if (
       !reuse ||
       !state.feed ||
+      state.feedDays !== (state.days ?? 7) ||
       Date.parse(state.feed.expires_at) <= Date.now()
     ) {
       const result = await api.request("POST", "/api/feed", {
@@ -289,6 +292,7 @@ async function feed(reuse = false) {
       });
       if (token !== generation) return;
       state.feed = result;
+      state.feedDays = state.days ?? 7;
     }
     if (token !== generation) return;
     feedBody();
@@ -391,7 +395,12 @@ function companyResults(items) {
 }
 function interests() {
   const p = state.profile;
-  main.innerHTML = `<section class="interests-page"><a class="back-link" href="#news">← К подборке</a><header><h1>Темы подборки</h1><p>Настройка новостей для ${esc(p.company.id)}</p></header><form id="interests-form"><h3>Темы компании</h3><p class="field-hint">Выбранные темы повышают приоритет новостей. Отключение действует только для вас.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("")}</div><h3>Личные интересы</h3><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.map((t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${p.personal_tag_ids.includes(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`).join("")}</div><p class="field-hint">Отключённые темы не участвуют в подборе, даже если добавлены в личные интересы.</p><div class="sticky-form-actions"><button class="button primary" type="submit">Сохранить и обновить ленту</button><a class="button ghost" href="#news">Отмена</a></div></form></section>`;
+  const selected = new Set(p.personal_tag_ids);
+  const option = (t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${selected.has(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`;
+  main.innerHTML = `<section class="interests-page"><a class="back-link" href="#news">← К подборке</a><header><h1>Темы подборки</h1><p>Какие темы учитывать в ваших новостях</p></header><form id="interests-form">
+    <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">Определены по деятельности компании. Ненужные темы можно отключить.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены. Можно добавить свои ниже.</p>'}</div></section>
+    <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Дополнительные темы не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
+    <p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="sticky-form-actions"><button class="button primary" type="submit">Сохранить</button><a class="button ghost" href="#news">Отмена</a></div></form></section>`;
 }
 function companyInfo() {
   const c = state.profile.company;
@@ -410,9 +419,10 @@ async function settings() {
     return;
   }
   panel(
-    "Мой профиль",
-    `<dl class="facts-list"><div><dt>Компания</dt><dd>${esc(state.profile.company.industry || state.profile.company.id)}</dd></div><div><dt>Должность</dt><dd>${esc(roles[state.profile.user.job_role])}</dd></div></dl><hr><button class="text-button danger" data-action="logout">Выйти из демопрофиля</button>`,
+    "Настройки",
+    `<a class="settings-link" href="#interests">${icon("sliders")}Темы подборки ${icon("arrow")}</a><button class="text-button danger" data-action="logout">Выйти</button>`,
   );
+  dialog.classList.add("settings-dialog");
 }
 function reason(id) {
   const item = state.feed?.items.find((item) => item.ranking.news_id === id);
@@ -467,7 +477,7 @@ function tagFeedback(button) {
   button.setAttribute("aria-expanded", "true");
 }
 function analysisFrame(a, body) {
-  main.innerHTML = `<a class="back-link" href="#news">← К подборке</a><div class="analysis-heading"><span class="eyebrow">AI-разбор события</span><h1>${esc(a.title)}</h1><div class="news-meta">${date(a.published_at)} <span>·</span> Компания ${esc(state.profile.company.id)} <span>·</span> ${esc(state.profile.company.industry)}</div></div>${body}`;
+  main.innerHTML = `<a class="back-link" href="#news">← К подборке</a><div class="analysis-heading"><span class="eyebrow">AI-разбор события</span><h1>${esc(a.title)}</h1><div class="news-meta">${date(a.published_at)} <span>·</span> ${esc(sourceName(a.source_url))}</div></div>${body}`;
 }
 async function analyse(id) {
   const version = generation;
@@ -481,7 +491,7 @@ async function analyse(id) {
     state.article = a;
     analysisFrame(
       a,
-      `<section class="analysis-loading"><div class="analysis-orb">${icon("spark")}</div><h2 id="job-label">Загружаем разбор</h2><p>Сопоставляем событие с контекстом ${esc(state.profile.company.id)}</p><div class="job-progress"><i></i></div><a class="text-button" href="#news">Вернуться к ленте</a></section>`,
+      `<section class="analysis-loading"><div class="analysis-orb">${icon("spark")}</div><h2 id="job-label">Загружаем разбор</h2><p>Оцениваем влияние новости на ваш бизнес</p><div class="job-progress"><i></i></div><a class="text-button" href="#news">Вернуться к ленте</a></section>`,
     );
     const revision = await analysisRevision(state.profile.company, a);
     if (version !== generation) return;
@@ -553,7 +563,7 @@ function statements(items) {
     ? items
         .map(
           (s) =>
-            `<div class="statement"><p>${esc(s.text)} ${s.source_refs.map((ref) => `<button class="citation" data-source="${esc(ref)}" data-statement="${analysisStatements(state.analysis.result).indexOf(s)}" aria-label="Открыть источник ${state.analysis.result.source_refs.findIndex((r) => r.id === ref) + 1}">${state.analysis.result.source_refs.findIndex((r) => r.id === ref) + 1}</button>`).join("")}</p>${s.condition ? `<span class="condition">Условие: ${esc(s.condition)}</span>` : ""}${s.company_feature_refs.length ? `<button class="feature-link" data-action="statement-features" data-statement="${analysisStatements(state.analysis.result).indexOf(s)}">Использованы признаки компании ${icon("arrow")}</button>` : ""}</div>`,
+            `<div class="statement"><p>${esc(s.text)} ${s.source_refs.map((ref) => `<button class="citation" data-source="${esc(ref)}" data-statement="${analysisStatements(state.analysis.result).indexOf(s)}" aria-label="Открыть источник ${state.analysis.result.source_refs.findIndex((r) => r.id === ref) + 1}">${state.analysis.result.source_refs.findIndex((r) => r.id === ref) + 1}</button>`).join("")}</p>${s.condition ? `<span class="condition">Условие: ${esc(s.condition)}</span>` : ""}${s.company_feature_refs.length ? `<button class="feature-link" data-action="statement-features" data-statement="${analysisStatements(state.analysis.result).indexOf(s)}">Данные для вывода ${icon("arrow")}</button>` : ""}</div>`,
         )
         .join("")
     : '<p class="muted">Недостаточно подтверждённых данных</p>';
@@ -595,8 +605,14 @@ async function statementFeatures(index) {
     .map((key) => {
       const value = featureValue(context, key);
       const display =
-        value === null
-          ? "Не сохранено в снимке"
+        value == null
+          ? "Данные отсутствуют"
+          : /(?:_MARK|_FLAG)$/.test(key) && [true, false, 0, 1, "0", "1", "0.0", "1.0"].includes(value)
+            ? ([true, 1, "1", "1.0"].includes(value) ? "Есть" : "Нет")
+          : key === "revenue" && Number.isFinite(Number(value))
+            ? money(Number(value))
+          : key === "country_code" && value === "RU"
+            ? "Россия"
           : Array.isArray(value)
             ? value.join(", ")
             : typeof value === "object"
@@ -605,12 +621,12 @@ async function statementFeatures(index) {
       const origins = (context.payload_json.features || []).filter(
         (item) => item.key === key,
       );
-      return `<div><dt>${esc(labels[key] || key)}</dt><dd>${esc(display)}${origins.map((item) => `<small>${esc([item.origin_file, item.origin_field, item.calc_method].filter(Boolean).join(" · "))}</small>`).join("")}</dd></div>`;
+      return `<div><dt>${esc(labels[key] || "Дополнительные данные")}</dt><dd>${esc(display)}${origins.length ? `<details class="data-origin"><summary>Источник данных</summary>${origins.map((item) => `<small>${esc([item.origin_file, item.origin_field, item.calc_method].filter(Boolean).join(" · "))}</small>`).join("")}</details>` : ""}</dd></div>`;
     })
     .join("");
   panel(
-    "Признаки этого вывода",
-    `<p>${esc(statement.text)}</p><dl class="facts-list">${rows}</dl><p class="field-hint">Данные ${esc(context.company_id)} на момент разбора</p>${origin ? `<p class="field-hint">Источник: ${esc(origin.file)} · строка ${esc(origin.record)}</p>` : ""}`,
+    "Данные для вывода",
+    `<p>${esc(statement.text)}</p><dl class="facts-list">${rows}</dl><p class="field-hint">Данные компании на момент разбора</p>${origin ? `<details class="data-origin"><summary>Исходный документ</summary><p>${esc(origin.file)} · строка ${esc(origin.record)}</p></details>` : ""}`,
   );
 }
 function renderAnalysis() {
@@ -754,13 +770,13 @@ function renderMarketTiles() {
         .join("")
     : '<p class="empty-inline">Инструменты не найдены</p>';
   $("#market-count").textContent =
-    `Показано ${rectangles.length} из ${items.length} · по убыванию оборота${rectangles.length < shown.length ? ". Нулевой оборот не занимает площадь" : ""}`;
+    query ? `Найдено: ${items.length}` : `На карте: ${rectangles.length} из ${items.length}`;
   $("#market-more").hidden = shown.length >= items.length;
   $("#market-size").textContent =
     state.market.size_basis === "equal" ||
     !shown.some((item) => item.size_metric > 0)
-      ? "Размер: равные доли, оборот не определяет площадь"
-      : "Размер: денежный оборот";
+      ? "Размер одинаковый: нет данных об обороте"
+      : "Размер блока — объём торгов";
   $("#market-instruments").innerHTML = shown
     .map(
       (item) =>
@@ -783,7 +799,7 @@ async function market() {
     if (token !== generation) return;
     state.market = m;
     $("#market-content").innerHTML =
-      `<div class="market-heading"><div><h2>Карта рынка</h2><p>${isDemo ? "Учебные котировки" : "MOEX · изменение к предыдущему закрытию"}</p></div><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div>${m.status === "stale" ? '<div class="notice warning">Котировки устарели или источник недоступен. Показан последний сохранённый срез.</div>' : ""}<div class="market-meta"><span>Срез: ${date(m.captured_at)}</span></div>${m.status === "empty" ? '<div class="empty-state"><h2>Котировки пока недоступны</h2><p>Источник не передал данные о торгах. Новостная лента продолжает работать.</p><a class="button primary" href="#news">К новостям</a></div>' : `<div class="market-layout"><div><label class="market-search">Найти инструмент<input type="search" id="market-search" placeholder="Тикер или название"></label><div id="market-count" class="field-hint" aria-live="polite"></div><div class="heatmap"></div><details class="market-instruments"><summary>Инструменты списком</summary><div id="market-instruments"></div></details><button class="button secondary" id="market-more" data-action="market-more">Показать ещё 30</button><div class="heatmap-legend"><span id="market-size">Размер: ${m.size_basis === "equal" ? "равные доли, оборот неизвестен" : "денежный оборот"}</span><span>− Снижение <i></i> Рост +</span></div></div><section class="movers"><h3>Лидеры изменения</h3><p>По абсолютному изменению цены</p>${m.top_movers.map((t) => `<button data-ticker="${esc(t.ticker)}"><span><strong>${esc(t.ticker)}</strong><small>${esc(t.name)}</small></span><strong class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)}</strong></button>`).join("")}</section></div>`}`;
+      `<div class="market-heading"><div><h2>Карта рынка</h2><p>${isDemo ? "Учебные котировки" : "MOEX · изменение к предыдущему закрытию"}</p></div><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div>${m.status === "stale" ? '<div class="notice warning">Котировки пока не обновились. Показаны последние доступные цены.</div>' : ""}${m.status === "empty" ? '<div class="empty-state"><h2>Котировки пока недоступны</h2><p>Попробуйте обновить страницу позже</p><a class="button primary" href="#news">К новостям</a></div>' : `<div class="market-layout"><div><label class="market-search">Найти инструмент<input type="search" id="market-search" placeholder="Тикер или название"></label><div id="market-count" class="field-hint" aria-live="polite"></div><div class="heatmap"></div><details class="market-instruments"><summary>Инструменты списком</summary><div id="market-instruments"></div></details><button class="button secondary" id="market-more" data-action="market-more">Показать ещё 30</button><div class="heatmap-legend"><span id="market-size">Размер: ${m.size_basis === "equal" ? "равные доли, оборот неизвестен" : "денежный оборот"}</span><span>− Снижение <i></i> Рост +</span></div></div><section class="movers"><h3>Наибольшие изменения</h3>${m.top_movers.map((t) => `<button data-ticker="${esc(t.ticker)}"><span><strong>${esc(t.ticker)}</strong><small>${esc(t.name)}</small></span><strong class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)}</strong></button>`).join("")}</section></div>`}`;
     marketLimit = 30;
     if (m.status !== "empty") renderMarketTiles();
   } catch (e) {
@@ -837,7 +853,7 @@ async function render() {
   window.scrollTo({ top: 0, behavior: "instant" });
   document.title = setup
     ? (path === "demo" ? "Компания и должность · Демонстрация" : "Настройка профиля")
-    : (path === "home" ? "Главная" : path === "market"
+    : (path === "home" ? "Главная" : path === "interests" ? "Темы подборки" : path === "market"
           ? "Биржевой обзор"
           : "Бизнес-инсайты") +
       " · Альфа" +
@@ -883,6 +899,7 @@ async function refresh() {
   await render();
 }
 document.addEventListener("click", async (e) => {
+  if (e.target.closest(".settings-link")) closePanel();
   if (e.target.closest(".skip-link")) {
     e.preventDefault();
     main.focus();
@@ -1079,7 +1096,7 @@ document.addEventListener("click", async (e) => {
       );
       panel(
         t.name,
-        `<span class="eyebrow">${esc(t.ticker)} · ${esc(t.board)}</span><div class="quote-price">${money(t.price)} ₽</div><p class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)} к предыдущему закрытию</p><dl class="facts-list"><div><dt>Предыдущее закрытие</dt><dd>${money(t.previous_close)} ₽</dd></div><div><dt>Денежный оборот</dt><dd>${money(t.turnover_rub === null ? null : t.turnover_rub / 1e6)} млн ₽</dd></div><div><dt>Время котировки</dt><dd>${date(t.as_of)}</dd></div><div><dt>Время получения</dt><dd>${date(t.captured_at)}</dd></div><div><dt>Задержка</dt><dd>${t.data_delay_minutes === null ? "Неизвестна" : esc(t.data_delay_minutes) + " мин"}</dd></div></dl>${isDemo ? '<p class="field-hint">Учебные котировки</p>' : ""}`,
+        `<span class="eyebrow">${esc(t.ticker)}</span><div class="quote-price">${money(t.price)} ₽</div><p class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)} к предыдущему закрытию</p><dl class="facts-list"><div><dt>Предыдущее закрытие</dt><dd>${money(t.previous_close)} ₽</dd></div><div><dt>Денежный оборот</dt><dd>${money(t.turnover_rub === null ? null : t.turnover_rub / 1e6)} млн ₽</dd></div><div><dt>Время котировки</dt><dd>${date(t.as_of)}</dd></div>${t.data_delay_minutes > 0 ? `<div><dt>Данные с задержкой</dt><dd>${esc(t.data_delay_minutes)} мин</dd></div>` : ""}</dl>${isDemo ? '<p class="field-hint">Учебные котировки</p>' : ""}`,
       );
     }
   } catch (error) {
@@ -1180,7 +1197,7 @@ document.addEventListener("submit", async (e) => {
         suggested_tag_ids: body.getAll("suggested"),
       });
       if (form.isConnected)
-        form.parentElement.innerHTML = `<p class="tag-editor-success" role="status">${icon("check")}${isDemo ? "Исправление принято в деморежиме" : "Исправление сохранено для проверки"}</p><p class="field-hint">Текущая разметка новости пока не изменена</p>`;
+        form.parentElement.innerHTML = `<p class="tag-editor-success" role="status">${icon("check")}${isDemo ? "Исправление принято в деморежиме" : "Исправление отправлено на проверку"}</p>`;
     }
     if (form.id === "question-form") {
       const question = String(body.get("question")).trim();
