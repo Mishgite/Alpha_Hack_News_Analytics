@@ -1,0 +1,11 @@
+.git
+.idea
+.venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.DS_Store
+**/.env
+**/.env.*
+!**/.env.example
+backend/app/newspaper_parser/data/**
