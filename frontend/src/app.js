@@ -220,9 +220,12 @@ function roleOptions(selected) {
     .join("");
 }
 async function demoSetup() {
-  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><span class="eyebrow">Демонстрация</span><h1>Компания и должность</h1></div><form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Применить</button></form><section class="form-card"><h2>Компания</h2><p>${esc(state.profile.company.industry || state.profile.company.id)}</p><p class="field-hint">${[state.profile.company.id, state.profile.company.city].filter(Boolean).map(esc).join(" · ")}</p><button class="text-button" data-action="company-info">О компании ${icon("arrow")}</button><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button><button class="text-button danger" data-action="logout">Выйти из демо</button></div>`;
+  const company = state.profile.company;
+  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><h1>Компания и должность</h1></div>
+    <section class="form-card selected-company"><h2>Выбранная компания</h2><p class="selected-company-name">${esc(company.industry || company.id)}</p><p class="field-hint">${[company.id, company.city].filter(Boolean).map(esc).join(" · ")}</p><div class="company-selection-actions"><button class="button secondary" data-action="choose-company" aria-expanded="false" aria-controls="company-picker">Сменить компанию</button><button class="text-button" data-action="company-info">О компании ${icon("arrow")}</button></div></section>
+    <section id="company-picker" class="form-card company-picker" hidden aria-labelledby="company-picker-title"><div class="company-picker-heading"><h2 id="company-picker-title">Выбрать другую компанию</h2><button class="icon-button" data-action="cancel-company-picker" aria-label="Закрыть выбор компании">${icon("close")}</button></div><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section>
+    <form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Открыть подборку ${icon("arrow")}</button></form><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button><button class="text-button danger" data-action="logout">Выйти из демо</button></div>`;
   theme();
-  await loadCompanies("");
 }
 async function login() {
   const token = generation;
@@ -370,13 +373,15 @@ async function loadCompanies(query) {
   }
 }
 function companyResults(items) {
+  const select = $("#login-company");
+  const onlySelected = !select && items.length === 1 && items[0].id === state.profile.company.id;
+  if (!select) items = items.filter((company) => company.id !== state.profile.company.id);
   const options = items
     .map(
       (c) =>
         `<option value="${esc(c.id)}">${esc(c.id)} · ${esc(c.industry || "Отрасль неизвестна")} · ${esc(c.city || "Город неизвестен")}</option>`,
     )
     .join("");
-  const select = $("#login-company");
   if (select) {
     select.innerHTML =
       options || '<option value="">Компании не найдены</option>';
@@ -386,13 +391,13 @@ function companyResults(items) {
     $("#company-results").innerHTML = items
       .map(
         (c) =>
-          `<button class="company-option ${c.id === state.profile.user.company_id ? "selected" : ""}" data-company="${esc(c.id)}"><span class="company-option-icon">${icon("people")}</span><span><strong>${esc(c.id)}</strong><b>${esc(c.industry || "Отрасль неизвестна")}</b><small>${esc(c.city || "Город неизвестен")} · ОКВЭД ${esc(c.okved_code || "неизвестен")}</small></span>${c.id === state.profile.user.company_id ? icon("check") : icon("arrow")}</button>`,
+          `<button class="company-option" data-company="${esc(c.id)}"><span class="company-option-icon">${icon("people")}</span><span><strong>${esc(c.id)}</strong><b>${esc(c.industry || "Отрасль неизвестна")}</b><small>${esc(c.city || "Город неизвестен")} · ОКВЭД ${esc(c.okved_code || "неизвестен")}</small></span>${icon("arrow")}</button>`,
       )
       .join("");
   }
   $("#catalog-status").textContent = items.length
     ? ""
-    : "Компании не найдены. Попробуйте другую отрасль, город или ID";
+    : onlySelected ? "Эта компания уже выбрана" : "Компании не найдены. Попробуйте другую отрасль, город или ID";
 }
 function feedPreferences() {
   const p = state.profile;
@@ -845,7 +850,7 @@ async function render() {
   main.classList.add("arrive");
   window.scrollTo({ top: 0, behavior: "instant" });
   document.title = setup
-    ? (path === "demo" ? "Компания и должность · Демонстрация" : "Настройка профиля")
+    ? (path === "demo" ? "Компания и должность" : "Настройка профиля")
     : (path === "home" ? "Главная" : path === "market"
           ? "Биржевой обзор"
           : "Бизнес-инсайты") +
@@ -939,6 +944,29 @@ document.addEventListener("click", async (e) => {
     }
     if (action === "demo-setup") location.hash = "demo";
 
+    if (action === "choose-company") {
+      const picker = $("#company-picker");
+      if (!picker.hidden) {
+        clearTimeout(searchTimer);
+        ++searchVersion;
+        picker.hidden = true;
+        b.setAttribute("aria-expanded", "false");
+      } else {
+        picker.hidden = false;
+        b.setAttribute("aria-expanded", "true");
+        $("#company-search").value = "";
+        $("#company-search").focus();
+        await loadCompanies("");
+      }
+    }
+    if (action === "cancel-company-picker") {
+      clearTimeout(searchTimer);
+      ++searchVersion;
+      $("#company-picker").hidden = true;
+      const chooseButton = $('[data-action="choose-company"]');
+      chooseButton.setAttribute("aria-expanded", "false");
+      chooseButton.focus();
+    }
     if (action === "catalog-retry") await loadCompanies(catalog.query);
     if (action === "company-info") companyInfo();
     if (action === "statement-features") await statementFeatures(b.dataset.statement);
@@ -1012,7 +1040,7 @@ document.addEventListener("click", async (e) => {
       }));
       state.feed = null;
       closePanel();
-      if (route() === "news") await render();
+      if (route() === "news" || route() === "demo") await render();
       else location.hash = "news";
       toast("Компания изменена");
     }
@@ -1132,6 +1160,10 @@ document.addEventListener("input", (e) => {
   }
   clearTimeout(searchTimer);
   ++searchVersion;
+  if ($("#company-results")) {
+    $("#company-results").replaceChildren();
+    $("#catalog-status").textContent = "Поиск…";
+  }
   const query = e.target.value.trim();
   const input = e.target;
   searchTimer = setTimeout(() => {

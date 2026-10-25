@@ -2891,3 +2891,11 @@ code {
   .preference-columns { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .feed-preferences form { padding: 16px; }
 }
+
+.selected-company-name { font-size: 16px; font-weight: 500; line-height: 1.6; }
+.company-selection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 18px; }
+.company-picker[hidden] { display: none; }
+.company-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.company-picker-heading h2 { font-size: 20px; }
+.company-picker-heading .icon-button { flex-shrink: 0; background: var(--surface-2); }
+.company-picker #company-results { margin-top: 14px; }
