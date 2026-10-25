@@ -20,12 +20,14 @@ from app.schemas.database import CompanyData, CompanyTagInput
 Создание: `ProfileService()` или `ProfileService(policy=...)`
 `policy: ProfilePolicy` задаёт веса тем по должностям и влияние реакций; при изменении настроек одна и та же политика передаётся в `FeedService`
 
-### `list_companies(*, limit: int = 50, offset: int = 0) -> list[CompanyData]`
+### `list_companies(*, limit: int = 50, offset: int = 0, query: str = "", demo_selection: bool = False) -> list[CompanyData]`
 
 Возвращает компании для выбора, по возрастанию ID
 
 - `limit`: количество компаний, от 1 до 100
 - `offset`: сколько записей пропустить, от 0
+- `query`: поиск по ID, отрасли, ОКВЭД, городу и региону
+- `demo_selection`: ограничить поиск выборкой последнего успешного импорта
 
 ### `register_demo(data: Registration, *, session_hours: int = 24) -> SessionGrant`
 
@@ -82,7 +84,7 @@ from app.schemas.database import CompanyData, CompanyTagInput
 - Результат: ID только добавленных компаний; пустой список на входе возвращает пустой список
 - При ошибке записи откатывается вся переданная порция
 
-Скрипт импорта вызывает этот метод порциями по 100: [запуск импорта](import-companies.md)
+Скрипт импорта вызывает этот метод порциями по 100: [запуск импорта](run.md)
 
 ### `save_company(company: CompanyData) -> CompanyData`
 
@@ -241,6 +243,11 @@ from app.schemas.insights import InsightResult, SourceReference
 - `idempotency_key`: непустой ключ запроса; повтор с тем же ключом и параметрами возвращает прежнее задание
 - Результат: задание, включая `id`, `status`, `analysis_id`, `error_code`
 - Сам AI этим методом не вызывается
+
+### `find_requested_job(user_id: UUID, news_id: UUID, *, idempotency_key: str) -> JobData | None`
+
+Возвращает прежнее задание пользователя без создания нового, включая остановленный воркер
+Проверяет совпадение новости и выбранной компании; если запроса не было, возвращает `None`
 
 ### `get_job(user_id: UUID, job_id: UUID) -> JobData`
 
@@ -406,10 +413,10 @@ from app.schemas.insights import InsightResult, SourceReference
 
 Импорт: `from app.services.market import MarketService`
 
-- `refresh() -> int`: загрузить MOEX вне транзакции, сохранить срез и вернуть число котировок; вызывается воркером
+- `refresh() -> int`: загрузить MOEX вне транзакции, сохранить срез и вернуть число котировок; вызывается воркером и API, не чаще раза в минуту для всех пользователей вместе
 - `get_overview(*, limit=20) -> MarketOverview`: получить сохранённую карту и лидеров изменения; `limit` от 1 до 100; сетевого запроса не делает
 
-Поля ответа описаны в `app.schemas.market`. Пустая БД возвращает `empty`, старые данные или ошибка обновления дают `stale`.
+Поля ответа описаны в `app.schemas.market`. Пустая БД возвращает `empty`, загрузка старше 30 минут или ошибка обновления дают `stale`; время самих котировок хранится в `as_of`.
 
 ## QuestionService: уточнения по разбору
 
@@ -419,7 +426,8 @@ from app.schemas.insights import InsightResult, SourceReference
 - `user_id`, `analysis_id`, `conversation_id`: UUID
 - `question`: от 1 до 1000 символов
 - Одновременно допускается один запрос пользователя; сразу после завершения действует пауза 10 секунд
-- История: последние пять сообщений той же беседы; источники: сохранённый разбор
+- История: последние пять сообщений той же беседы; источники: сохранённый разбор и снимок данных компании
+- Ошибка JSON-схемы исправляется одним повтором; после него обязательны проверка цитат и проверка утверждений
 - При смене компании во время обработки ответ не сохраняется; при ошибке проверки модели возвращается `RuntimeError`
 
 ## AnalysisAgent: создание разбора
@@ -430,7 +438,7 @@ from app.schemas.insights import InsightResult, SourceReference
 - `await analyze(work: AnalysisWork) -> AnalysisOutput`: план, поиск, генерация, проверка и одна возможная коррекция; результат содержит `result`, `status`, `trace`
 - `await answer(analysis: AnalysisData, history: list[QuestionData], question: str)`: текст ответа и список источников; в API использовать через `QuestionService.ask`
 
-Воркер получает `AnalysisWork` через `InsightService.prepare_job` и завершает задание через `complete_job`. Модель возвращает компактный `AnalysisDraft` с выбранными `evidence_ids`; ID, метаданные источников и дословные цитаты добавляет сервер. Схема публичного результата остаётся `InsightResult`. Лимиты модели и запуск описаны в [инструкции воркера](worker.md).
+Воркер получает `AnalysisWork` через `InsightService.prepare_job` и завершает задание через `complete_job`. Модель возвращает компактный `AnalysisDraft` с выбранными `evidence_ids`; ID, метаданные источников и дословные цитаты добавляет сервер. Схема публичного результата остаётся `InsightResult`. Лимиты модели и запуск описаны в [инструкции запуска](run.md).
 
 ## Дополнительные методы
 
@@ -446,3 +454,16 @@ from app.schemas.insights import InsightResult, SourceReference
 ### `ProfileService.ensure_company_topics(company_id)`
 
 Добавляет начальные темы по ОКВЭД, только если у компании ещё нет тем. Возвращает `True`, если темы сохранены, иначе `False`. Модель не вызывается. Неизвестная компания вызывает `LookupError`, неизвестный ОКВЭД остаётся без автоматических тем.
+
+### `ProfilePipeline.prepare_company(company_id: str, version: str) -> bool`
+
+Импорт: `from app.services.profile_pipeline import ProfilePipeline, TAGGING_VERSION`
+
+- `company_id`: ID существующей компании
+- `version`: `TAGGING_VERSION + LLM_MODEL_CONTEXT`, одинаковая для импорта и воркера
+- Возвращает `True`, если модель вызвана и темы сохранены; `False`, если эта версия уже готова
+- Сохраняет темы, уверенность модели и статус одной транзакцией; ручные темы не удаляет
+- Одновременная разметка той же компании отклоняется до платного запроса
+- При ошибке сохраняет статус `failed` и пробрасывает исключение; повторный вызов продолжает обработку
+
+Для загрузки 50 компаний из CSV используется [import_companies.py](../app/import_companies.py), порядок запуска в [инструкции](run.md#4-компании-из-csv)

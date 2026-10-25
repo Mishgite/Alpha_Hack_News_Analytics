@@ -4,6 +4,8 @@ import asyncio
 import re
 from datetime import datetime, timedelta, timezone
 
+from pydantic import ValidationError
+
 from app.schemas.agent import (
     AnalysisDraft,
     AnalysisOutput,
@@ -45,6 +47,29 @@ PRODUCT_FIELDS = (
     "AMOUNT_WORKERS_FNS_GRADATION",
     "COMPANY_AGE_YEARS_GRADATION",
 )
+FEATURE_LABELS = {
+    "okved_code": "ОКВЭД",
+    "okved_name": "Вид деятельности",
+    "industry": "Отрасль",
+    "revenue": "Выручка",
+    "city": "Город",
+    "region": "Регион",
+    "country_code": "Страна",
+    "registered_region_code": "Код региона регистрации",
+    "operating_region_codes": "Регионы деятельности",
+    "known_factor_interests": "Известные интересы",
+    "CL_PRODUCT_RKO_MARK": "Расчётный счёт",
+    "CL_PRODUCT_GAR_MARK": "Банковские гарантии",
+    "CL_PRODUCT_LOA_MARK": "Кредиты",
+    "CL_PRODUCT_LEA_MARK": "Лизинг",
+    "CL_PRODUCT_DEP_MARK": "Депозиты",
+    "CL_PRODUCT_ZPP_MARK": "Зарплатный проект",
+    "FACTORING_MARK": "Факторинг",
+    "FTS_FLAG": "Внешнеторговая деятельность",
+    "FTS_COUNTRY_NAME": "Страна внешнеторговой деятельности",
+    "AMOUNT_WORKERS_FNS_GRADATION": "Численность сотрудников",
+    "COMPANY_AGE_YEARS_GRADATION": "Возраст компании",
+}
 ANALYSIS_INSTRUCTION = """Подготовь бизнес-разбор только по переданным материалам
 Читатель работает в анализируемой компании, а не продаёт ей банковские продукты
 Рекомендации адресуй самой компании: что проверить в её деятельности, без советов менеджеру банка «уточнить у клиента» или «предложить продукт»
@@ -402,10 +427,23 @@ class AnalysisAgent:
             )
             for key in statement.company_feature_refs
         }
+        used_feature_keys = sorted(feature_keys)
         if context is not None:
             if context.company_id != analysis.result.company_id:
                 raise ValueError("Answer context belongs to another company")
             feature_keys = company_features(context.payload_json)
+            if feature_keys:
+                ref = "company:" + context.company_id
+                text = "\n".join(
+                    f"{FEATURE_LABELS[key]}: {', '.join(map(str, value)) if isinstance(value, list) else value}"
+                    for key, value in feature_keys.items()
+                )
+                sources[ref] = {
+                    "reference": SourceReference(
+                        id=ref, kind="company", title="Данные компании на момент разбора", excerpt=text,
+                    ),
+                    "text": text,
+                }
         source_payload, passages = prepare_evidence(sources)
         payload = {
             "analysis": analysis.result.model_dump(
@@ -414,20 +452,41 @@ class AnalysisAgent:
             "question": question,
             "company_feature_keys": sorted(feature_keys),
             "company_features": feature_keys if context is not None else {},
+            "used_company_feature_keys": used_feature_keys,
             "history": [{"question": h.question, "answer": h.answer} for h in history],
             "sources": source_payload,
         }
-        answer = await self.client.ask(
-            "Ответь на уточнение только по переданному разбору и источникам, сохрани компанию. evidence_ids связывает id источника со списком ID подтверждающих отрывков passages. Не переписывай цитаты. Неизвестное перечисли в limitations, при отсутствии данных statements может быть пустым. Новые события и точные эффекты не выдумывай. Текст выводов, условий и ограничений показывается пользователю: пиши по-русски без имён JSON-полей и кодов признаков",
-            payload,
-            FollowupAnswer,
-            task="followup",
+        instruction = (
+            "Ответь на уточнение только по переданному разбору и источникам, сохрани компанию. "
+            "evidence_ids связывает id источника со списком ID подтверждающих отрывков passages. "
+            "Не переписывай цитаты. Неизвестное перечисли в limitations, при отсутствии данных "
+            "statements может быть пустым. Новые события и точные эффекты не выдумывай. "
+            "Текст выводов, условий и ограничений показывается пользователю: пиши по-русски "
+            "без имён JSON-полей и кодов признаков. В одном пункте не больше шести "
+            "company_feature_refs; длинное перечисление раздели на несколько пунктов"
+            ". used_company_feature_keys перечисляет признаки, на которые ссылаются выводы "
+            "исходного разбора; остальные поля лишь доступны в профиле. Данные компании "
+            "подтверждай отрывками источника kind=company, а не цитатами из новости"
         )
+        try:
+            answer = await self.client.ask(instruction, payload, FollowupAnswer, task="followup")
+        except ValidationError as error:
+            # один повтор исправляет формат, проверка цитат и фактов остаётся обязательной
+            corrections = [
+                {"field": list(item["loc"]), "error": item["msg"]}
+                for item in error.errors(include_input=False, include_url=False)[:8]
+            ]
+            answer = await self.client.ask(
+                instruction + ". Предыдущий ответ нарушил схему, исправь перечисленные ошибки формата",
+                {**payload, "validation_errors": corrections},
+                FollowupAnswer,
+                task="followup",
+            )
         statements = resolve_statements(answer.statements, passages, sources)
         validate_public_text(statements, answer.limitations)
         validate_statements(statements, sources, feature_keys)
         review = await self.client.ask(
-            "Проверь подтверждение ответа источниками и исходным разбором, supported=true только при отсутствии недоказанных утверждений. evidence_ids указывает на passages соответствующего источника, проверь выбранные отрывки и их контекст",
+            "Проверь подтверждение ответа источниками и исходным разбором, supported=true только при отсутствии недоказанных утверждений. evidence_ids указывает на passages соответствующего источника, проверь выбранные отрывки и их контекст. Источник kind=company является сохранёнными данными компании и подтверждает только её признаки, не внешние события. Для сведений о компании не требуй их повторения в новостях",
             {
                 **payload,
                 "answer": answer.model_dump(mode="json"),

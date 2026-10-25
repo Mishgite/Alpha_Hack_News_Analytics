@@ -4,7 +4,8 @@ import asyncio
 import json
 import os
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -481,14 +482,23 @@ def test_analysis_rejects_internal_fields_in_public_text(field):
         validate_public_text([statement], limitations)
 
 
-def test_followup_receives_saved_company_values():
-    """передаёт в уточнение значения снимка компании, а не только названия полей"""
+@pytest.mark.parametrize("invalid_answers", [0, 1, 2])
+def test_followup_receives_saved_company_values(invalid_answers):
+    """передаёт снимок компании, исправляет формат один раз и отклоняет повторную ошибку"""
     captured = []
     fixture = FixtureTransport()
+    followup_calls = []
 
     async def transport(messages, schema):
         captured.append(json.loads(messages[-1]["content"]))
-        return await fixture(messages, schema)
+        raw = await fixture(messages, schema)
+        if schema is FollowupAnswer:
+            followup_calls.append(raw)
+            if len(followup_calls) <= invalid_answers:
+                invalid = json.loads(raw)
+                invalid["statements"][0]["company_feature_refs"] = ["industry"] * 8
+                return json.dumps(invalid)
+        return raw
 
     agent = AnalysisAgent(client=JsonClient(transport=transport))
     from app.schemas.insights import InsightResult
@@ -522,8 +532,28 @@ def test_followup_receives_saved_company_values():
             "profile_json": {"CL_PRODUCT_LOA_MARK": "0.0"},
         },
     )
+    if invalid_answers == 2:
+        with pytest.raises(ValueError, match="at most 6"):
+            asyncio.run(agent.answer(analysis, [], "Какая выручка?", context=context))
+        assert len(followup_calls) == 2
+        return
     asyncio.run(agent.answer(analysis, [], "Какая выручка?", context=context))
+    assert len(followup_calls) == 1 + invalid_answers
+    if invalid_answers:
+        assert captured[1]["validation_errors"][0]["field"] == [
+            "statements",
+            0,
+            "company_feature_refs",
+        ]
     for payload in captured:
+        company_source = next(
+            source for source in payload["sources"] if source["kind"] == "company"
+        )
+        assert company_source["id"] == "company:test"
+        assert any(
+            "Выручка: 12000" in part["text"] for part in company_source["passages"]
+        )
+        assert payload["used_company_feature_keys"] == []
         assert payload["company_features"] == {
             "industry": "Перевозки на момент разбора",
             "revenue": "12000",
@@ -683,6 +713,34 @@ def test_api_and_worker_cycle(services):
             == "ready"
         )
         assert client.get(f"/api/analyses/{analysis.id}/trace").status_code == 200
+        s["runtime"].save("worker", {"status": "stopped", "analysis_enabled": True})
+        repeated = client.post(
+            f"/api/news/{news_id}/analysis", json={"idempotency_key": "first"}
+        )
+        assert repeated.status_code == 202, repeated.text
+        assert repeated.json()["analysis_id"] == str(analysis.id)
+        assert repeated.json()["status"] == "ready"
+        assert (
+            client.post(
+                f"/api/news/{news_id}/analysis", json={"idempotency_key": "offline-new"}
+            ).status_code
+            == 503
+        )
+        assert (
+            s["insights"].find_requested_job(
+                UUID(session.json()["user"]["id"]),
+                UUID(news_id),
+                idempotency_key="offline-new",
+            )
+            is None
+        )
+        assert (
+            client.post(
+                f"/api/news/{uuid4()}/analysis", json={"idempotency_key": "first"}
+            ).status_code
+            == 400
+        )
+        s["runtime"].save("worker", {"status": "running", "analysis_enabled": True})
         context = client.get(f"/api/analyses/{analysis.id}/context")
         assert context.status_code == 200, context.text
         assert context.json()["company_id"] == "demo-api-company"
@@ -736,9 +794,9 @@ def test_api_and_worker_cycle(services):
         assert client.get("/api/profile").status_code == 401
 
 
-def test_market_snapshot(services):
+def test_market_snapshot(services, database):
     """проверяет оборот, проценты, кеш и устаревание без запроса к MOEX"""
-    timestamp = datetime.now(UTC).isoformat()
+    timestamp = (datetime.now(UTC) - timedelta(days=2)).isoformat()
     quote = MarketQuote(
         ticker="TEST",
         name="Тест",
@@ -752,16 +810,58 @@ def test_market_snapshot(services):
             },
         },
     )
-    service = MarketService(
-        uow_factory=services["uow"], fetcher=lambda **kwargs: [quote]
-    )
+    fetcher = Mock(return_value=[quote])
+    service = MarketService(uow_factory=services["uow"], fetcher=fetcher)
     assert service.refresh() == 1
     result = service.get_overview()
     assert result.status == "ready" and result.top_movers[0].change_percent == 10
     assert result.heatmap[0].size_metric == 5000
     assert result.heatmap[0].volume == 45
+    assert result.heatmap[0].as_of < datetime.now(UTC) - timedelta(days=1)
+    assert service.refresh() == 1
+    fetcher.assert_called_once_with(limit=500)
     services["runtime"].save("market", {"status": "failed"})
     assert service.get_overview().status == "stale"
+
+    with database.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE processing_states SET updated_at = now() - interval '2 minutes' WHERE key = 'market_refresh'"
+            )
+        )
+    fetcher.side_effect = httpx.ReadTimeout("source unavailable")
+    with pytest.raises(httpx.ReadTimeout):
+        service.refresh()
+    failed = service.get_overview()
+    assert failed.status == "stale"
+    assert failed.heatmap[0].price == 110
+    assert failed.captured_at == result.captured_at
+
+
+def test_market_refresh_api():
+    """проверяет авторизацию обновления, параметры и ответ при недоступной бирже"""
+    from app.schemas.market import MarketOverview
+
+    application = create_app(ApiSettings(_env_file=None))
+    service = Mock()
+    service.get_overview.return_value = MarketOverview(
+        status="empty", size_basis="equal", heatmap=[], top_movers=[]
+    )
+    application.dependency_overrides[get_market_service] = lambda: service
+    with TestClient(application) as client:
+        assert client.post("/api/market/refresh").status_code == 401
+        service.refresh.assert_not_called()
+        application.dependency_overrides[dependencies.get_current_user] = lambda: (
+            SimpleNamespace(id=uuid4())
+        )
+        assert client.post("/api/market/refresh?limit=0").status_code == 422
+        assert client.post("/api/market/refresh?limit=10").status_code == 200
+        service.refresh.assert_called_once_with()
+        service.get_overview.assert_called_once_with(limit=10)
+        service.refresh.side_effect = httpx.ReadTimeout("private upstream detail")
+        response = client.post("/api/market/refresh")
+        assert response.status_code == 503
+        assert "private upstream" not in response.text
 
 
 def test_budget_and_profile_queue(services):
@@ -952,9 +1052,7 @@ def test_failed_analysis_does_not_publish_result(services):
 
 def test_demo_company_selection_and_search(services):
     """проверяет поиск внутри выбранных 50 компаний и сохранность полного каталога"""
-    from app.services.profiles import demo_company_ids
-
-    ids = demo_company_ids()
+    ids = [f"catalog-company-{index:02}" for index in range(50)]
     assert len(ids) == len(set(ids)) == 50
     profile = services["profiles"]
     create_demo_data(profile, services["news"])
@@ -962,6 +1060,7 @@ def test_demo_company_selection_and_search(services):
         "demo-api-company"
     ]
     assert profile.list_companies(demo_selection=True, query="несуществующая") == []
+    services["runtime"].save("demo_companies", {"ids": ids})
     for index, company_id in enumerate(ids):
         profile.save_company(
             CompanyData(
@@ -1102,3 +1201,306 @@ def test_real_company_feed_excludes_demo_sources(services):
     )
     feed = s["feed"].create_feed(session.user.id)
     assert [item.ranking.news_id for item in feed.items] == [article.news_id]
+
+
+def test_company_csv_selection_validation_and_reimport(services, tmp_path):
+    """проверяет выбор прежних ID из CSV, повторы, ошибки строк и повторный импорт"""
+    import csv
+
+    from app.import_companies import COLUMNS, import_companies
+
+    source = tmp_path / "companies.csv"
+    rows = []
+    for index in range(1, 7):
+        row = dict.fromkeys(COLUMNS, "")
+        row.update(
+            SYNTHETIC_U=f"U_90000{index}",
+            MAINOKVED_CODE="62.01",
+            CITY="Казань",
+            REGION="Татарстан",
+            REVENUE_COMPANY="123.45",
+        )
+        rows.append(row)
+    rows.append(dict(rows[-1]))
+    rows[4]["REVENUE_COMPANY"] = "NaN"
+    with source.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, COLUMNS, delimiter=";")
+        writer.writeheader()
+        writer.writerows(rows)
+    requested = ["U_900003", "U_900001"]
+    result = import_companies(
+        source,
+        limit=2,
+        company_ids=requested,
+        service=services["profiles"],
+        output_dir=tmp_path / "first",
+    )
+    assert result["company_ids"] == requested
+    assert result["created"] == 2
+    assert result["rejected"] == 3
+    assert services["profiles"].get_company(requested[0]).revenue == Decimal("123.45")
+    result = import_companies(
+        source,
+        limit=2,
+        company_ids=requested,
+        service=services["profiles"],
+        output_dir=tmp_path / "second",
+    )
+    assert result["created"] == 0 and result["already_exists"] == 2
+    service = Mock()
+    with pytest.raises(ValueError, match="отсутствуют"):
+        import_companies(
+            source,
+            limit=2,
+            company_ids=["U_900001", "U_900006"],
+            service=service,
+            output_dir=tmp_path / "missing",
+        )
+    service.create_companies.assert_not_called()
+    result = import_companies(
+        source,
+        limit=4,
+        check_only=True,
+        service=service,
+        output_dir=tmp_path / "same-industry",
+    )
+    assert result["selected"] == 4
+    service.create_companies.assert_not_called()
+
+
+def test_company_preparation_resume_and_lock(services):
+    """проверяет пропуск готовых версий, повтор после ошибки и защиту от двойной разметки"""
+    from app.infrastructure.database.worker_lock import company_tagging_lock
+    from app.schemas.database import CompanyTagInput
+    from app.schemas.tagging import ProfileTags
+    from app.services.profile_pipeline import ProfilePipeline
+
+    services["news"].sync_tag_catalog()
+    company = CompanyData(
+        id="U_900100",
+        profile_version="csv-1",
+        city="Казань",
+        region="Татарстан",
+        okved_code="62.01",
+    )
+    profiles = services["profiles"]
+    profiles.save_company(company)
+    profiles.set_company_tags(
+        company.id, [CompanyTagInput(tag_id="biz_it", origin="manual", base_weight=1.8)]
+    )
+    tagger = Mock()
+    tagger.tag.return_value = ProfileTags(
+        tags=[NewsTag(id="biz_it", confidence=0.9)],
+        geography=Geography(country_code="RU", region_codes=["reg_16"]),
+    )
+    pipeline = ProfilePipeline(profile_service=profiles, tagger=tagger)
+    assert pipeline.prepare_company(company.id, "test-model-v1") is True
+    assert pipeline.prepare_company(company.id, "test-model-v1") is False
+    assert tagger.tag.call_count == 1
+    state = services["runtime"].get("profile:" + company.id)["value"]
+    assert (
+        state["status"] == "ready" and state["features"]["tags"][0]["confidence"] == 0.9
+    )
+    tagger.tag.side_effect = RuntimeError("provider unavailable")
+    with pytest.raises(RuntimeError):
+        pipeline.prepare_company(company.id, "test-model-v2")
+    assert (
+        services["runtime"].get("profile:" + company.id)["value"]["status"] == "failed"
+    )
+    tagger.tag.side_effect = None
+    assert pipeline.prepare_company(company.id, "test-model-v2") is True
+    with (
+        company_tagging_lock(company.id),
+        pytest.raises(RuntimeError, match="другим процессом"),
+    ):
+        pipeline.prepare_company(company.id, "test-model-v3")
+    assert tagger.tag.call_count == 3
+    with services["uow"]() as db:
+        from sqlalchemy import select
+
+        from app.infrastructure.database.models.profiles import CompanyTag
+
+        manual = db._session.scalar(
+            select(CompanyTag).where(
+                CompanyTag.company_id == company.id, CompanyTag.origin == "manual"
+            )
+        )
+        assert manual.base_weight == Decimal("1.8")
+
+
+def test_company_preparation_publishes_only_complete_selection(tmp_path):
+    """не заменяет выборку интерфейса при незавершённой разметке"""
+    from app.import_companies import prepare_companies
+
+    result = {
+        "company_ids": ["U_1", "U_2"],
+        "selected": 2,
+        "sha256": "test",
+        "report_dir": str(tmp_path),
+    }
+    pipeline, runtime = Mock(), Mock()
+    pipeline.prepare_company.side_effect = [True, RuntimeError("provider unavailable")]
+    with (
+        patch(
+            "app.services.ai_agents._common.settings",
+            return_value={"LLM_MODEL_CONTEXT": "test"},
+        ),
+        patch("app.services.ai_agents._common.validate_configuration"),
+    ):
+        with pytest.raises(RuntimeError):
+            prepare_companies(result, pipeline=pipeline, runtime=runtime)
+        runtime.save.assert_not_called()
+        assert (
+            json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))[
+                "status"
+            ]
+            == "interrupted"
+        )
+        pipeline.prepare_company.side_effect = [False, True]
+        prepare_companies(result, pipeline=pipeline, runtime=runtime)
+    runtime.save.assert_called_once_with(
+        "demo_companies", {"ids": ["U_1", "U_2"], "source_sha256": "test"}
+    )
+    assert result["ready"] == result["tagged"] == 1
+
+
+def test_company_csv_null_byte_is_rejected_before_database(tmp_path):
+    """повреждённое поле CSV отклоняется до записи порции в PostgreSQL"""
+    import csv
+
+    from app.import_companies import COLUMNS, import_companies
+
+    rows = []
+    for index, city in enumerate(["Москва\x00", "Казань"], 1):
+        row = dict.fromkeys(COLUMNS, "")
+        row.update(SYNTHETIC_U=f"U_{index}", CITY=city, MAINOKVED_CODE="62.01")
+        rows.append(row)
+    source = tmp_path / "source.csv"
+    with source.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, COLUMNS, delimiter=";")
+        writer.writeheader()
+        writer.writerows(rows)
+    service = Mock()
+    service.create_companies.return_value = ["U_2"]
+    result = import_companies(
+        source, limit=1, output_dir=tmp_path / "report", service=service
+    )
+    assert result["rejected"] == 1 and result["company_ids"] == ["U_2"]
+    assert service.create_companies.call_args.args[0][0].city == "Казань"
+
+
+def test_selection_is_saved_before_model_failure(tmp_path, monkeypatch):
+    """после сбоя модели следующий запуск использует те же ID и не выбирает другие компании"""
+    import app.import_companies as importer
+
+    selection = tmp_path / "companies" / "selection.txt"
+    ids = [f"U_{index}" for index in range(50)]
+    result = {
+        "company_ids": ids,
+        "created": 50,
+        "already_exists": 0,
+        "report_dir": str(tmp_path),
+    }
+    loader = Mock(return_value=result)
+    monkeypatch.setattr(importer, "SELECTION_PATH", selection)
+    monkeypatch.setattr(importer, "import_companies", loader)
+    monkeypatch.setattr(importer, "get_engine", Mock())
+    monkeypatch.setattr("sys.argv", ["import_companies.py"])
+    monkeypatch.setattr("app.services.ai_agents._common.validate_configuration", Mock())
+
+    def fail_model(_):
+        assert selection.read_text(encoding="utf-8").splitlines() == ids
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(importer, "prepare_companies", fail_model)
+    assert importer.main() == 1
+    monkeypatch.setattr(importer, "prepare_companies", Mock(return_value=result))
+    assert importer.main() == 0
+    assert loader.call_args.kwargs["company_ids"] == ids
+    with pytest.raises(ValueError, match="другой процесс"):
+        importer.save_selection(["U_999"], selection)
+    assert selection.read_text(encoding="utf-8").splitlines() == ids
+
+
+def test_selection_disk_error_does_not_leave_partial_file(tmp_path):
+    """ошибка записи не оставляет обрезанный selection.txt для следующего запуска"""
+    from app.import_companies import save_selection
+
+    target = tmp_path / "selection.txt"
+    with patch("app.import_companies.os.fsync", side_effect=OSError("disk full")):
+        with pytest.raises(OSError):
+            save_selection(["U_1", "U_2"], target)
+    assert not target.exists()
+    assert {p.name for p in tmp_path.iterdir()} <= {"selection.txt.lock"}
+
+
+def test_market_skips_invalid_quote_and_preserves_last_valid_snapshot(
+    services, database
+):
+    """одна плохая котировка не ломает весь срез, полностью плохой ответ не стирает цены"""
+    good = MarketQuote(
+        ticker="VALID",
+        name="Тест",
+        raw={
+            "security": {"PREVPRICE": "100"},
+            "marketdata": {
+                "SYSTIME": datetime.now(UTC).isoformat(),
+                "LAST": "110",
+                "VALTODAY": 1000,
+                "VOLTODAY": 10,
+            },
+        },
+    )
+    bad = MarketQuote(ticker="INVALID", raw={"marketdata": {"SYSTIME": "not-a-date"}})
+    fetcher = Mock(return_value=[bad, good, MarketQuote(ticker="EMPTY")])
+    service = MarketService(uow_factory=services["uow"], fetcher=fetcher)
+
+    def allow_refresh():
+        with database.begin() as connection:
+            connection.execute(
+                text("DELETE FROM processing_states WHERE key='market_refresh'")
+            )
+
+    allow_refresh()
+    assert service.refresh() == 1
+    assert service.get_overview().heatmap[0].ticker == "VALID"
+    assert services["runtime"].get("market")["value"]["rejected"] == 2
+    allow_refresh()
+    fetcher.return_value = [bad]
+    with pytest.raises(RuntimeError, match="no dated quotes"):
+        service.refresh()
+    result = service.get_overview()
+    assert result.status == "stale" and result.heatmap[0].price == 110
+
+
+def test_company_changed_during_model_does_not_receive_old_tags(services):
+    """ответ модели для старого профиля не записывается поверх изменившейся компании"""
+    from app.schemas.database import CompanyTagInput
+    from app.schemas.tagging import ProfileTags
+    from app.services.profile_pipeline import ProfilePipeline
+
+    profiles = services["profiles"]
+    company = CompanyData(id="U_900101", profile_version="before", industry="IT")
+    profiles.save_company(company)
+    profiles.set_company_tags(
+        company.id, [CompanyTagInput(tag_id="biz_it", origin="manual", base_weight=1.8)]
+    )
+
+    def changed_profile(_):
+        profiles.save_company(
+            company.model_copy(
+                update={"profile_version": "after", "industry": "Торговля"}
+            )
+        )
+        return ProfileTags(tags=[], geography=Geography())
+
+    tagger = Mock()
+    tagger.tag.side_effect = changed_profile
+    pipeline = ProfilePipeline(profile_service=profiles, tagger=tagger)
+    with pytest.raises(ValueError, match="changed during tagging"):
+        pipeline.prepare_company(company.id, "test")
+    assert profiles.get_company(company.id).profile_version == "after"
+    state = services["runtime"].get("profile:" + company.id)["value"]
+    assert state["status"] == "failed" and state["version"] == "before|test"
+    user = profiles.register_demo(Registration(company_id=company.id)).user
+    assert profiles.get_profile(user.id).company_tags[0].origin == "manual"

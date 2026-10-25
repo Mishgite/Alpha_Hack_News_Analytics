@@ -31,6 +31,15 @@ class RuntimeRepository:
             )
         )
 
+    def reserve_market_refresh(self):
+        """разрешает один запрос котировок в минуту для всех пользователей и воркера"""
+        self._session.execute(text("SELECT pg_advisory_xact_lock(684720264)"))
+        state = self.get("market_refresh")
+        if state and (datetime.now(UTC) - state["updated_at"]).total_seconds() < 60:
+            return False
+        self.save("market_refresh", {"status": "requested"})
+        return True
+
     def reserve_call(self, task, model, daily_limit):
         """проверяет общий лимит запросов этой БД и резервирует вызов до обращения к модели"""
         self._session.execute(text("SELECT pg_advisory_xact_lock(684720262)"))

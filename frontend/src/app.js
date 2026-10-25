@@ -80,14 +80,18 @@ let panelRetry;
 let profileChange = null;
 async function changeProfile(operation) {
   if (profileChange) throw new UserError("Дождитесь сохранения профиля");
-  ++generation;
-  state.feed = null;
-  state.analysis = null;
-  state.messages = [];
+  const version = ++generation;
   observer.disconnect();
   profileChange = Promise.resolve().then(operation);
   try {
-    return await profileChange;
+    const result = await profileChange;
+    state.feed = null;
+    state.analysis = null;
+    state.messages = [];
+    return result;
+  } catch (error) {
+    if (version === generation) observeImpressions();
+    throw error;
   } finally {
     profileChange = null;
   }
@@ -408,12 +412,25 @@ function companyResults(items) {
 }
 function feedPreferences() {
   const p = state.profile;
+  const companyIds = [...new Set(p.company_tags.map((t) => t.tag_id))];
   const selected = new Set(p.personal_tag_ids);
   const option = (t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${selected.has(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`;
   return `<section class="feed-preferences" id="feed-preferences" aria-label="Настройки подборки" hidden><form id="interests-form"><div class="preference-columns">
-    <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">По деятельности компании</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены</p>'}</div></section>
+    <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">По деятельности компании</p><div class="topic-options">${companyIds.map((id) => `<label><input type="checkbox" name="company-topic" value="${esc(id)}" ${p.disabled_tag_ids.includes(id) ? "" : "checked"}><span><strong>${esc(tagName(id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены</p>'}</div></section>
     <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
     </div><p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="preference-actions"><button class="button primary" type="submit">Сохранить</button><button class="button ghost" type="button" data-action="cancel-preferences">Отмена</button></div></form></section>`;
+}
+function interestSettings(body) {
+  const included = new Set(body.getAll("company-topic"));
+  const companyIds = new Set(state.profile.company_tags.map((t) => t.tag_id));
+  const disabled = new Set([
+    ...state.profile.disabled_tag_ids.filter((id) => !companyIds.has(id)),
+    ...[...companyIds].filter((id) => !included.has(id)),
+  ]);
+  return {
+    personal: [...new Set(body.getAll("personal"))].filter((id) => !disabled.has(id)),
+    disabled: [...disabled],
+  };
 }
 function togglePreferences(open) {
   $("#feed-preferences").hidden = !open;
@@ -435,7 +452,7 @@ function reason(id) {
   const hasGeography = ["formula-v2-geography", "formula-v3-business-context"].includes(r.ranking_version);
   const topics = r.matched_signals.length
     ? `<div class="tags">${r.matched_signals.map(tag).join("")}</div>`
-    : "<p>Совпадений с вашими темами нет. Новость попала в подборку за счёт свежести.</p>";
+    : "<p>В сохранённой подборке нет сведений о совпавших темах.</p>";
   const geography = hasGeography
     ? `<section><h3>Регион</h3><p>${(r.geography_factor ?? 1) < 1 ? "Событие относится к другому региону. Поэтому его приоритет ниже." : r.geography_bonus > 0 ? esc(r.geography_reason) + ". Это повысило позицию новости." : r.geography_score == null ? "География не уточнена и не влияет на порядок." : r.geography_score > 0 ? "Регион совпал, но совпадений по темам нет. Поэтому география не повысила позицию новости." : "География новости не совпала с данными компании. Дополнительный приоритет за регион не добавлен."}</p></section>`
     : "";
@@ -651,7 +668,7 @@ function renderConversation() {
             )
             .map(
               (s) =>
-                `<button class="text-button" data-source="${esc(s.id)}">Источник ответа ${icon("arrow")}</button>`,
+                `<button class="text-button" data-source="${esc(s.id)}">${esc(s.kind === "company" ? "Данные компании" : s.title || "Источник ответа")} ${icon("arrow")}</button>`,
             )
             .join("") ||
           '<small class="muted">Подтверждающие источники не найдены</small>'
@@ -704,7 +721,7 @@ async function source(ref, statementIndex) {
   const quote = statementEvidence(state.analysis.result, statementIndex, ref);
   panel(
     s.title,
-    `<div class="source-details"><span class="label-badge">${s.kind === "company" ? "Профиль компании" : s.kind === "bank_report" ? "Материал банка" : "Публикация"}</span>${s.published_on ? `<p>Дата: ${esc(s.published_on)}</p>` : ""}${s.page ? `<p>Страница ${s.page}</p>` : ""}<h3>${quote ? "Цитата" : "Фрагмент источника"}</h3><blockquote>${esc(quote || s.excerpt || "Фрагмент не сохранён")}</blockquote>${isDemo ? '<p class="field-hint">Синтетический источник</p>' : ""}${sourceError ? `<p class="form-error">${esc(sourceError)}</p>` : ""}${documentLink || (external ? `<a class="button secondary" href="${esc(external)}" target="_blank" rel="noopener noreferrer">Открыть первоисточник ${icon("external")}</a>` : '<p class="field-hint">Оригинал источника недоступен</p>')}</div>`,
+    `<div class="source-details"><span class="label-badge">${s.kind === "company" ? "Профиль компании" : s.kind === "bank_report" ? "Материал банка" : "Публикация"}</span>${s.published_on ? `<p>Дата: ${esc(s.published_on)}</p>` : ""}${s.page ? `<p>Страница ${s.page}</p>` : ""}<h3>${quote ? "Цитата" : "Фрагмент источника"}</h3><blockquote>${esc(quote || s.excerpt || "Фрагмент не сохранён")}</blockquote>${isDemo ? '<p class="field-hint">Синтетический источник</p>' : ""}${sourceError ? `<p class="form-error">${esc(sourceError)}</p>` : ""}${documentLink || (external ? `<a class="button secondary" href="${esc(external)}" target="_blank" rel="noopener noreferrer">Открыть первоисточник ${icon("external")}</a>` : s.kind === "company" ? "" : '<p class="field-hint">Оригинал источника недоступен</p>')}</div>`,
   );
 }
 window.addEventListener("beforeunload", () =>
@@ -774,7 +791,7 @@ function renderMarketTiles() {
             `<button class="market-tile ${t.color_metric === null ? "unknown" : t.color_metric === 0 ? "neutral" : t.color_metric > 0 ? "up" : "down"}" data-ticker="${esc(t.ticker)}" title="${esc(t.ticker + ": " + t.name + " · " + change(t.change_percent))}" aria-label="${esc(t.ticker + ": " + t.name + " · " + change(t.change_percent))}" style="left:${t.x}px;top:${t.y}px;width:${t.width}px;height:${t.height}px"><strong>${esc(t.width >= 45 && t.height >= 30 ? t.ticker : "")}</strong>${t.width >= 70 && t.height >= 70 ? `<span>${change(t.change_percent)}</span>` : ""}${t.width >= 120 && t.height >= 120 ? `<small>${esc(t.name)}</small>` : ""}</button>`,
         )
         .join("")
-    : '<p class="empty-inline">Инструменты не найдены</p>';
+    : '<p class="empty-inline">Акции и фонды не найдены</p>';
   $("#market-count").textContent =
     query ? `Найдено: ${items.length}` : `На карте: ${rectangles.length} из ${items.length}`;
   $("#market-more").hidden = shown.length >= items.length;
@@ -790,23 +807,45 @@ function renderMarketTiles() {
     )
     .join("");
 }
-async function market() {
-  main.innerHTML =
+async function market(refresh = false) {
+  let query = $("#market-search")?.value || "";
+  const button = $('[data-action="market-refresh"]');
+  if (refresh && button?.disabled) return;
+  if (refresh && button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.innerHTML = `${icon("refresh")}Обновление…`;
+  }
+  if (!refresh) main.innerHTML =
     heading("Биржевой обзор") +
     '<div id="market-content">' +
     skeleton() +
     "</div>";
   const token = generation;
   try {
-    const m = await api.request("GET", "/api/market?limit=20");
+    const m = await api.request(refresh ? "POST" : "GET", refresh ? "/api/market/refresh?limit=20" : "/api/market?limit=20", undefined, { timeoutMs: 45000 });
     if (token !== generation) return;
+    query = $("#market-search")?.value ?? query;
     state.market = m;
+    const times = m.heatmap.map((item) => Date.parse(item.as_of)).filter(Number.isFinite);
+    const quoteTime = times.length ? Math.max(...times) : null;
     $("#market-content").innerHTML =
-      `<div class="market-heading"><div><h2>Карта рынка</h2><p>${isDemo ? "Учебные котировки" : "MOEX · изменение к предыдущему закрытию"}</p></div><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div>${m.status === "stale" ? '<div class="notice warning">Котировки пока не обновились. Показаны последние доступные цены.</div>' : ""}${m.status === "empty" ? '<div class="empty-state"><h2>Котировки пока недоступны</h2><p>Попробуйте обновить страницу позже</p><a class="button primary" href="#news">К новостям</a></div>' : `<div class="market-layout"><div><label class="market-search">Найти инструмент<input type="search" id="market-search" placeholder="Тикер или название"></label><div id="market-count" class="field-hint" aria-live="polite"></div><div class="heatmap"></div><details class="market-instruments"><summary>Инструменты списком</summary><div id="market-instruments"></div></details><button class="button secondary" id="market-more" data-action="market-more">Показать ещё 30</button><div class="heatmap-legend"><span id="market-size">Размер: ${m.size_basis === "equal" ? "равные доли, оборот неизвестен" : "денежный оборот"}</span><span>− Снижение <i></i> Рост +</span></div></div><section class="movers"><h3>Наибольшие изменения</h3>${m.top_movers.map((t) => `<button data-ticker="${esc(t.ticker)}"><span><strong>${esc(t.ticker)}</strong><small>${esc(t.name)}</small></span><strong class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)}</strong></button>`).join("")}</section></div>`}`;
-    marketLimit = 30;
-    if (m.status !== "empty") renderMarketTiles();
+      `<div class="market-heading"><div><h2>Карта рынка</h2><p>${isDemo ? "Учебные котировки" : "MOEX · изменение к предыдущему закрытию"}${quoteTime ? `<br>Цены на ${esc(date(quoteTime))}` : ""}</p></div><button class="button secondary" data-action="market-refresh">${icon("refresh")}Обновить</button></div>${m.status === "stale" ? '<div class="notice warning">Показаны сохранённые котировки. Нажмите «Обновить», чтобы проверить новые данные.</div>' : ""}${m.status === "empty" ? '<div class="empty-state"><h2>Котировки пока недоступны</h2><p>Попробуйте обновить страницу позже</p><a class="button primary" href="#news">К новостям</a></div>' : `<div class="market-layout"><div><label class="market-search">Найти акцию или фонд<input type="search" id="market-search" placeholder="Тикер или название"></label><div id="market-count" class="field-hint" aria-live="polite"></div><div class="heatmap"></div><details class="market-instruments"><summary>Акции и фонды списком</summary><div id="market-instruments"></div></details><button class="button secondary" id="market-more" data-action="market-more">Показать ещё 30</button><div class="heatmap-legend"><span id="market-size">Размер: ${m.size_basis === "equal" ? "равные доли, оборот неизвестен" : "денежный оборот"}</span><span>− Снижение <i></i> Рост +</span></div></div><section class="movers"><h3>Наибольшие изменения</h3>${m.top_movers.map((t) => `<button data-ticker="${esc(t.ticker)}"><span><strong>${esc(t.ticker)}</strong><small>${esc(t.name)}</small></span><strong class="${t.change_percent > 0 ? "positive" : t.change_percent < 0 ? "negative" : ""}">${change(t.change_percent)}</strong></button>`).join("")}</section></div>`}`;
+    if (!refresh) marketLimit = 30;
+    if (m.status !== "empty") {
+      $("#market-search").value = query;
+      renderMarketTiles();
+    }
   } catch (e) {
-    if (token === generation) $("#market-content").innerHTML = failure(e);
+    if (token !== generation) return;
+    if (refresh) toast("Не удалось обновить котировки. Попробуйте позже", true);
+    else $("#market-content").innerHTML = failure(e);
+  } finally {
+    if (button?.isConnected) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.innerHTML = `${icon("refresh")}Обновить`;
+    }
   }
 }
 function scenarios() {
@@ -934,6 +973,7 @@ document.addEventListener("click", async (e) => {
       return;
     }
     if (action === "scenarios" && isDemo) scenarios();
+    if (action === "market-refresh") await market(true);
     if (action === "market-more") {
       marketLimit += 30;
       renderMarketTiles();
@@ -1233,17 +1273,8 @@ document.addEventListener("submit", async (e) => {
       else location.hash = "news";
     }
     if (form.id === "interests-form") {
-      const included = body.getAll("company-topic"),
-        companyIds = state.profile.company_tags.map((t) => t.tag_id);
-      state.profile = await changeProfile(() => api.request("PUT", "/api/profile/interests", {
-        personal: body.getAll("personal"),
-        disabled: [
-          ...state.profile.disabled_tag_ids.filter(
-            (t) => !companyIds.includes(t),
-          ),
-          ...companyIds.filter((t) => !included.includes(t)),
-        ],
-      }));
+      const settings = interestSettings(body);
+      state.profile = await changeProfile(() => api.request("PUT", "/api/profile/interests", settings));
       state.feed = null;
       if (!form.isConnected) return;
       closePanel();

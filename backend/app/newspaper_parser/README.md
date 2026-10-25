@@ -19,7 +19,7 @@
 
 ## Запуск
 
-Настройте PostgreSQL и `backend/app/.env` по [инструкции backend](../../docs/database-setup.md), установите зависимости в окружение проекта, затем запустите из папки `backend`:
+Настройте PostgreSQL и `backend/app/.env` по [инструкции backend](../../docs/run.md), установите зависимости в окружение проекта, затем запустите из папки `backend`:
 
 ```bash
 app/.venv/bin/python app/newspaper_parser/newspaper_parser.py

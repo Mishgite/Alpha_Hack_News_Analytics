@@ -211,6 +211,21 @@ class AnalysisRepository:
         # запрос выбрал последние сообщения, а в ответе они идут от старого к новому
         return [QuestionData.model_validate(row) for row in rows[::-1]]
 
+    def find_requested_job(self, user_id, news_id, idempotency_key):
+        """находит прежний запрос пользователя и проверяет его новость и выбранную компанию"""
+        user = _require_user(self._session, user_id)
+        job = self._session.scalar(
+            select(AnalysisJob).where(
+                AnalysisJob.user_id == user_id,
+                AnalysisJob.idempotency_key == idempotency_key,
+            )
+        )
+        if job is None:
+            return None
+        if job.company_id != user.company_id or job.news_id != news_id:
+            raise ValueError("Idempotency key reused with another company or article")
+        return JobData.model_validate(job)
+
     def create_job(
         self, user_id: UUID, news_id: UUID, *, idempotency_key: str
     ) -> JobData:

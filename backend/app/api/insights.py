@@ -50,7 +50,10 @@ def request_analysis(
     service: InsightService = Depends(get_insight_service),
     runtime: RuntimeService = Depends(get_runtime_service),
 ):
-    """ставит разбор в очередь только при доступном worker с настроенной моделью"""
+    """возвращает прежнее задание, для нового запроса проверяет доступность worker"""
+    existing = service.find_requested_job(user.id, news_id, idempotency_key=data.idempotency_key)
+    if existing is not None:
+        return existing
     state = runtime.get("worker")
     if (
         not state

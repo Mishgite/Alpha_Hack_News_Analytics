@@ -657,7 +657,7 @@ export const demo = (() => {
         source_url: null,
       };
     }
-    if (p === "/api/market") {
+    if (p === "/api/market" || p === "/api/market/refresh") {
       const stocks = [
         ["SBER", "Сбербанк", 1.84, 286.4, 8],
         ["GAZP", "Газпром", -2.12, 135.8, 6],

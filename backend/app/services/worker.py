@@ -17,7 +17,7 @@ from app.services.ai_agents.analysis import AnalysisAgent
 from app.services.insights import InsightService
 from app.services.market import MarketService
 from app.services.news_pipeline import NewsPipeline
-from app.services.profile_pipeline import ProfilePipeline
+from app.services.profile_pipeline import TAGGING_VERSION, ProfilePipeline
 from app.services.reports import ReportService
 from app.services.runtime import RuntimeService
 
@@ -179,23 +179,20 @@ class BackgroundWorker:
         """размечает только изменённые компании пользователей, ошибки повторяет не чаще раза в час"""
         config = settings()
         validate_configuration(config, "LLM_MODEL_CONTEXT")
-        version = "profile-tags-v2:" + config["LLM_MODEL_CONTEXT"]
+        version = TAGGING_VERSION + config["LLM_MODEL_CONTEXT"]
         companies = await asyncio.to_thread(
             self.profiles.profiles.pending_tagging, version, self.settings.profile_batch
         )
         errors = []
         for company in companies:
-            state = {
-                "version": company.profile_version + "|" + version,
-                "status": "ready",
-            }
             try:
-                await asyncio.to_thread(self.profiles.tag_company, company.id)
-            except Exception as error:
-                state.update(status="failed", error=type(error).__name__)
+                await asyncio.to_thread(
+                    self.profiles.prepare_company, company.id, version
+                )
+            except Exception as error:  # noqa: BLE001
+                # ошибка одного профиля не должна останавливать остальные циклы воркера
                 errors.append(type(error).__name__)
                 logger.error("Company tagging failed: %s", type(error).__name__)
-            await asyncio.to_thread(self.runtime.save, "profile:" + company.id, state)
         return {"processed": len(companies) - len(errors), "errors": errors}
 
     async def import_reports(self):

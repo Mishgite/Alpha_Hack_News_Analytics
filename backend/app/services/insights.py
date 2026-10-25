@@ -70,6 +70,13 @@ class InsightService:
             db.commit()
             return job
 
+    def find_requested_job(self, user_id: UUID, news_id: UUID, *, idempotency_key: str) -> JobData | None:
+        """восстанавливает принятый запрос без создания нового задания и обращения к модели"""
+        with self._uow() as db:
+            return db.analyses.find_requested_job(
+                user_id, news_id, required(idempotency_key, "idempotency_key")
+            )
+
     def get_job(self, user_id: UUID, job_id: UUID) -> JobData:
         """возвращает состояние задания после проверки владельца и выбранной компании"""
         with self._uow() as db:

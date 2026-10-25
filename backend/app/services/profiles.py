@@ -1,8 +1,5 @@
-import json
 from datetime import UTC, datetime, timedelta
-from functools import lru_cache
 from math import log1p
-from pathlib import Path
 from secrets import token_urlsafe
 from uuid import UUID
 
@@ -20,13 +17,6 @@ from app.schemas.services import (
 from ._common import digest, required
 from .company_topics import initial_company_topics, operating_topics
 from .geography import company_geography
-
-
-@lru_cache
-def demo_company_ids() -> tuple[str, ...]:
-    """читает выбранные для демонстрации ID компаний разных отраслей, регионов и размеров"""
-    path = Path(__file__).resolve().parents[1] / "demo_companies.json"
-    return tuple(json.loads(path.read_text(encoding="utf-8")))
 
 
 def build_profile(inputs: ProfileInputs, policy: ProfilePolicy) -> RankingProfile:
@@ -117,9 +107,14 @@ class ProfileService:
     ) -> list[CompanyData]:
         """возвращает страницу компаний для выбора, отсортированную по ID"""
         with self._uow() as db:
-            company_ids = demo_company_ids() if demo_selection else None
-            if demo_selection and not db.companies.list(limit=1, company_ids=company_ids):
-                company_ids = ("demo-api-company",)
+            company_ids = None
+            if demo_selection:
+                selection = db.runtime.get("demo_companies")
+                company_ids = selection["value"]["ids"] if selection else ()
+                if not company_ids or not db.companies.list(
+                    limit=1, company_ids=company_ids
+                ):
+                    company_ids = ("demo-api-company",)
             return db.companies.list(
                 limit=limit,
                 offset=offset,
@@ -165,11 +160,17 @@ class ProfileService:
             return company
 
     def save_company_tagging(
-        self, expected: CompanyData, tags: list[CompanyTagInput]
+        self,
+        expected: CompanyData,
+        tags: list[CompanyTagInput],
+        *,
+        state: dict | None = None,
     ) -> None:
         """заменяет автоматические темы без удаления ручных, проверяет версию данных компании"""
         with self._uow() as db:
             db.companies.save_company_tagging(expected, tags)
+            if state is not None:
+                db.runtime.save("profile:" + expected.id, state)
             db.commit()
 
     def set_company_tags(self, company_id: str, tags: list[CompanyTagInput]) -> None:
