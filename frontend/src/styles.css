@@ -2104,6 +2104,9 @@ code {
   }
 }
 @media (max-width: 760px) {
+  html {
+    scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
   .sidebar {
     display: none;
   }
@@ -2112,8 +2115,17 @@ code {
   }
   .topbar {
     height: 68px;
-    padding: 0 20px;
+    padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
     justify-content: space-between;
+  }
+  .demo-controls {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .profile-setup main {
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    min-height: 100dvh;
   }
   .mobile-brand {
     display: flex;
@@ -2136,11 +2148,11 @@ code {
     display: none;
   }
   .icon-button {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
   }
   main {
-    padding: 28px 20px 32px;
+    padding: 28px max(20px, env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
     min-height: calc(100vh - 150px);
   }
   h1 {
@@ -2207,10 +2219,11 @@ code {
     justify-content: space-between;
     width: 100%;
     align-items: center;
+    flex-wrap: wrap;
   }
   .toolbar-actions > .button {
-    font-size: 11px;
-    min-height: 40px;
+    font-size: 13px;
+    min-height: 44px;
     padding: 8px 12px;
   }
   .period-label {
@@ -2218,9 +2231,9 @@ code {
     gap: 8px;
   }
   .period-label select {
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px;
-    font-size: 11px;
+    font-size: 16px;
   }
   .news-card {
     padding: 20px 20px 0;
@@ -2274,9 +2287,9 @@ code {
     flex-wrap: wrap;
   }
   .news-actions .button {
-    font-size: 11px;
+    font-size: 13px;
     padding: 10px 12px;
-    min-height: 42px;
+    min-height: 44px;
     gap: 7px;
   }
   .news-actions .button svg {
@@ -2284,7 +2297,7 @@ code {
     height: 16px;
   }
   .news-actions .text-button {
-    font-size: 10px;
+    font-size: 13px;
   }
   .feedback {
     margin: -6px 0 18px;
@@ -2304,7 +2317,7 @@ code {
     z-index: 20;
     background: var(--surface);
     border-top: 1px solid var(--line);
-    padding: 9px 10px max(9px, env(safe-area-inset-bottom));
+    padding: 9px max(10px, env(safe-area-inset-right)) max(9px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     justify-content: space-around;
     box-shadow: 0 -8px 24px #00000004;
   }
@@ -2315,7 +2328,7 @@ code {
     justify-content: center;
     flex-direction: column;
     gap: 4px;
-    font-size: 9px;
+    font-size: 11px;
     color: var(--muted);
     min-width: 0;
     flex: 1;
@@ -2363,14 +2376,20 @@ code {
     font-size: 13px;
   }
   .personal-options label {
-    font-size: 10px;
-    padding: 10px 7px;
+    font-size: 13px;
+    padding: 12px;
+    min-height: 44px;
+  }
+  .personal-options {
+    grid-template-columns: minmax(0, 1fr);
   }
   .sticky-form-actions {
-    bottom: -24px;
+    position: static;
+    flex-wrap: wrap;
   }
   .sticky-form-actions .button {
-    font-size: 10px;
+    font-size: 13px;
+    width: 100%;
   }
   .facts-list > div {
     font-size: 12px;
@@ -2592,13 +2611,39 @@ code {
   .context-label,
   .news-meta,
   .why-button {
-    font-size: 11px;
+    font-size: 12px;
   }
   .summary {
     font-size: 13px;
   }
   .tag {
-    font-size: 10px;
+    font-size: 11px;
+  }
+  input:not([type="checkbox"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .text-button,
+  .why-button,
+  .edit-topics,
+  .feature-link,
+  .back-link,
+  .suggested-questions button,
+  .demo-controls button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .source-row > span,
+  .facts-list > div > *,
+  .bank-preview > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .tag {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2803,6 +2848,11 @@ code {
   .widget-heading h2 { font-size: 23px; }
   .preview-story { margin: 0 20px; }
   .widget-status { padding: 18px 20px; }
+  .drawer,
+  .drawer.reason-dialog {
+    max-width: calc(100% - max(12px, env(safe-area-inset-left), env(safe-area-inset-right)) - max(12px, env(safe-area-inset-left), env(safe-area-inset-right)));
+    max-height: calc(100dvh - max(12px, env(safe-area-inset-top), env(safe-area-inset-bottom)) - max(12px, env(safe-area-inset-top), env(safe-area-inset-bottom)));
+  }
 }
 
 .widget-heading { flex-wrap: wrap; }
