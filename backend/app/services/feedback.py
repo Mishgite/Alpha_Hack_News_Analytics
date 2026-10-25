@@ -31,7 +31,7 @@ class FeedbackService:
                 user_id, news_id, reaction, snapshot_id=snapshot_id
             )
             db.commit()
-            return result
+            return result.model_copy(update={"my_reaction": reaction})
 
     def record_impression(
         self,
@@ -57,6 +57,46 @@ class FeedbackService:
             )
         with self._uow() as db:
             result = db.feedback.record_impression(
+                event_id=event_id,
+                user_id=user_id,
+                snapshot_id=snapshot_id,
+                news_id=news_id,
+                occurred_at=occurred_at,
+            )
+            db.commit()
+            return result
+
+    def report_tags(
+        self, user_id, news_id, *, snapshot_id, wrong_tag_ids, suggested_tag_ids
+    ):
+        """сохраняет жалобу на разметку отдельно от персонального дизлайка"""
+        with self._uow() as db:
+            result = db.feedback.report_tags(
+                user_id, news_id, snapshot_id, wrong_tag_ids, suggested_tag_ids
+            )
+            db.commit()
+            return result
+
+    def record_open(
+        self,
+        *,
+        event_id: UUID,
+        user_id: UUID,
+        snapshot_id: UUID,
+        news_id: UUID,
+        occurred_at: datetime,
+    ) -> InteractionData:
+        """сохраняет открытие из доступной ленты без текста новости и данных браузера"""
+        if (
+            snapshot_id is None
+            or occurred_at.tzinfo is None
+            or occurred_at > datetime.now(UTC)
+        ):
+            raise ValueError(
+                "A snapshot and non-future timezone-aware time are required"
+            )
+        with self._uow() as db:
+            result = db.feedback.record_open(
                 event_id=event_id,
                 user_id=user_id,
                 snapshot_id=snapshot_id,

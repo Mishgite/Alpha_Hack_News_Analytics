@@ -21,6 +21,7 @@ from app.infrastructure.database.repositories.profiles import (
 from app.schemas.database import (
     AnalysisData,
     AnalysisWrite,
+    ContextData,
     JobData,
     QuestionData,
     ReportChunkData,
@@ -81,6 +82,15 @@ class AnalysisRepository:
         )
         return AnalysisData.model_validate(row) if row else None
 
+    def get_context_for_user(self, user_id: UUID, analysis_id: UUID) -> ContextData:
+        """возвращает сохранённый контекст разбора после проверки доступа к компании"""
+        self.get_for_user(user_id, analysis_id)
+        analysis = self._session.get(AIAnalysis, analysis_id)
+        context = self._session.get(CompanyContextSnapshot, analysis.company_context_id)
+        if context is None:
+            raise LookupError("Analysis context not found")
+        return ContextData.model_validate(context)
+
     def save(self, user_id: UUID, data: AnalysisWrite) -> AnalysisData:
         """сохраняет разбор для указанной компании, контекста и версии новости
 
@@ -134,7 +144,7 @@ class AnalysisRepository:
             )
             if identity != expected:
                 raise ValueError("Cache key reused for another analysis context")
-            if existing.status == "ready" and (
+            if existing.status in {"ready", "partial"} and (
                 existing.expires_at is None or existing.expires_at > datetime.now(UTC)
             ):
                 return AnalysisData.model_validate(existing)
@@ -211,6 +221,23 @@ class AnalysisRepository:
         if not idempotency_key.strip():
             raise ValueError("Non-empty idempotency key required")
         user = _require_user(self._session, user_id, lock=True)
+        existing = self._session.scalar(
+            select(AnalysisJob).where(
+                AnalysisJob.user_id == user_id,
+                AnalysisJob.idempotency_key == idempotency_key,
+            )
+        )
+        if existing is None:
+            pending = self._session.scalar(
+                select(func.count())
+                .select_from(AnalysisJob)
+                .where(
+                    AnalysisJob.user_id == user_id,
+                    AnalysisJob.status.in_(["queued", "running"]),
+                )
+            )
+            if pending >= 3:
+                raise ValueError("At most three analysis jobs may be pending")
         self._session.execute(
             insert(AnalysisJob)
             .values(
@@ -389,3 +416,59 @@ class ReportRepository:
             )
             for chunk, report in rows
         ]
+
+    def save(self, report):
+        """сохраняет неизменяемую версию отчёта и фрагменты в одной транзакции"""
+        values = report.model_dump(exclude={"parts"})
+        statement = (
+            insert(AlfaReport)
+            .values(**values, status="ready")
+            .on_conflict_do_nothing(index_elements=[AlfaReport.file_hash])
+            .returning(AlfaReport.id)
+        )
+        report_id = self._session.scalar(statement)
+        if report_id is None:
+            return self._session.scalar(
+                select(AlfaReport.id).where(AlfaReport.file_hash == report.file_hash)
+            )
+        self._session.add_all(
+            [
+                AlfaReportChunk(report_id=report_id, **part.model_dump())
+                for part in report.parts
+            ]
+        )
+        self._session.flush()
+        return report_id
+
+    def versions(self):
+        """возвращает хэши готовых версий в стабильном порядке"""
+        return list(
+            self._session.scalars(
+                select(AlfaReport.file_hash)
+                .where(AlfaReport.status == "ready")
+                .order_by(AlfaReport.file_hash)
+            )
+        )
+
+    def get_chunk(self, chunk_id):
+        """находит фрагмент вместе с документом, неизвестный ID вызывает LookupError"""
+        row = self._session.execute(
+            select(AlfaReportChunk, AlfaReport)
+            .join(AlfaReport)
+            .where(AlfaReportChunk.id == chunk_id, AlfaReport.status == "ready")
+        ).first()
+        if row is None:
+            raise LookupError("Report fragment not found")
+        chunk, report = row
+        return ReportChunkData(
+            id=chunk.id,
+            report_id=report.id,
+            page_num=chunk.page_num,
+            chunk_no=chunk.chunk_no,
+            text=chunk.text,
+            source_span_json=chunk.source_span_json,
+            filename=report.filename,
+            title=report.title,
+            report_date=report.report_date,
+            source_url=report.source_url,
+        )

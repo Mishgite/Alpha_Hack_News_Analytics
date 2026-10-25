@@ -8,6 +8,7 @@ from app.infrastructure.database.uow import UnitOfWork
 from app.schemas.database import (
     AnalysisData,
     AnalysisWrite,
+    ContextData,
     JobData,
     QuestionData,
     ReportChunkData,
@@ -79,6 +80,11 @@ class InsightService:
         with self._uow() as db:
             return db.analyses.get_for_user(user_id, analysis_id)
 
+    def get_analysis_context(self, user_id: UUID, analysis_id: UUID) -> ContextData:
+        """читает признаки на момент разбора, даже если текущий профиль компании уже изменился"""
+        with self._uow() as db:
+            return db.analyses.get_context_for_user(user_id, analysis_id)
+
     def claim_job(
         self, worker_id: str, *, lease_seconds: int = 120, max_attempts: int = 3
     ) -> JobData | None:
@@ -130,7 +136,11 @@ class InsightService:
             _require_lease(job, work.job.worker_id, work.job.attempts)
             self._check_work(db, work, job)
             result = db.analyses.get_cached_result(job.user_id, _cache_key(work))
-            return result if result is not None and result.status == "ready" else None
+            return (
+                result
+                if result is not None and result.status in {"ready", "partial"}
+                else None
+            )
 
     def _check_work(self, db: UnitOfWork, work: AnalysisWork, job: JobData) -> None:
         """проверяет задание, компанию и новость из AnalysisWork перед сохранением результата
@@ -245,14 +255,15 @@ class InsightService:
     ) -> QuestionData:
         """сохраняет вопрос, готовый ответ и ссылки на источники
 
-        вопрос должен быть не длиннее 1000 символов, ответ и источники обязательны
+        вопрос должен быть не длиннее 1000 символов, ответ обязателен
+        ответ об отсутствии данных может не содержать источников
         проверяет, что ID источников не повторяются
         """
         question, answer = required(question, "question"), required(answer, "answer")
         if len(question) > 1000:
             raise ValueError("Question exceeds 1000 characters")
-        if not sources or len({source.id for source in sources}) != len(sources):
-            raise ValueError("Answer requires sources with unique ids")
+        if len({source.id for source in sources}) != len(sources):
+            raise ValueError("Answer source ids must be unique")
         with self._uow() as db:
             result = db.analyses.add_question(
                 user_id,

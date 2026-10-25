@@ -115,6 +115,7 @@ class FeedEntry(Record):
     published_at: AwareDatetime
     source_url: str | None
     tags: list[str]
+    my_reaction: Literal["like", "dislike", "none"] = "none"
 
 
 class SnapshotPage(Record):
@@ -124,12 +125,15 @@ class SnapshotPage(Record):
     items: list[FeedEntry]
     next_position: int | None
     has_more: bool
+    generated_at: AwareDatetime | None = None
+    expires_at: AwareDatetime | None = None
 
 
 class ReactionCounts(Record):
     news_id: UUID
     likes_cnt: int
     dislikes_cnt: int
+    my_reaction: Literal["like", "dislike", "none"] = "none"
 
 
 class InteractionData(Record):

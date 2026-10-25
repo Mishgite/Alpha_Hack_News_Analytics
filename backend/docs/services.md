@@ -74,6 +74,16 @@ from app.schemas.database import CompanyData, CompanyTagInput
 
 Возвращает профиль для ранжировщика: веса тем, отрасль, географию, интересующие факторы и версию профиля
 
+### `create_companies(companies: list[CompanyData]) -> list[str]`
+
+Добавляет компании одной транзакцией, существующие ID пропускает без изменения профиля
+
+- `companies`: до 500 моделей `CompanyData`, ID внутри списка должны быть уникальны
+- Результат: ID только добавленных компаний; пустой список на входе возвращает пустой список
+- При ошибке записи откатывается вся переданная порция
+
+Скрипт импорта вызывает этот метод порциями по 100: [запуск импорта](import-companies.md)
+
 ### `save_company(company: CompanyData) -> CompanyData`
 
 Для загрузки компаний из датасета: создаёт компанию или полностью заменяет её профиль
@@ -184,14 +194,14 @@ from app.schemas.ranking import RankingRequest, RankingResult
 - Результат: те же поля, что у `create_feed()`; элементы `items` содержат новость и результат ранжирования
 - Снимок должен принадлежать пользователю и текущей компании, срок его действия не должен истечь
 
-## FeedbackService: реакции и показы
+## FeedbackService: реакции, показы и открытия
 
 ```python
 from app.services import FeedbackService
 ```
 
 Создание: `FeedbackService()`
-Оба метода проверяют доступ к снимку ленты и наличие в нём новости
+Методы проверяют доступ к снимку ленты и наличие в нём новости
 
 ### `set_reaction(user_id: UUID, news_id: UUID, reaction: Reaction, *, snapshot_id: UUID) -> ReactionCounts`
 
@@ -203,12 +213,16 @@ from app.services import FeedbackService
 
 ### `record_impression(*, event_id: UUID, user_id: UUID, snapshot_id: UUID, news_id: UUID, occurred_at: datetime) -> InteractionData`
 
-Записывает показ новости пользователю
+Записывает один показ новости на пользователя и снимок, повтор с другим `event_id` возвращает уже сохранённое событие
 
 - `event_id`: новый UUID для каждого показа; при повторной отправке того же события ID сохраняется
 - `snapshot_id`: ID снимка с новостью
 - `occurred_at`: время показа с часовым поясом, не позднее текущего
-- Результат: сохранённое событие с переданными ID, временем и типом события
+- Результат: сохранённое событие с ID, временем и типом `impression`; при повторе возвращаются данные первой записи
+
+### `record_open(*, event_id: UUID, user_id: UUID, snapshot_id: UUID, news_id: UUID, occurred_at: datetime) -> InteractionData`
+
+Записывает первое открытие текста новости из снимка. Параметры и защита от повторов такие же, как у `record_impression`; тип события `open`. Метод вызывается отдельно после отображения новости, а не при любом чтении записи из БД. Показ и открытие имеют разные `event_id`.
 
 ## InsightService: AI-разборы и вопросы
 
@@ -253,7 +267,7 @@ from app.schemas.insights import InsightResult, SourceReference
 - `analysis_id`, `conversation_id`: ID разбора и диалога
 - `question`: непустой вопрос, до 1000 символов
 - `answer`: непустой текст ответа
-- `sources`: непустой список источников с уникальными `id`; поля в [SourceReference](../app/schemas/insights.py)
+- `sources`: источники с уникальными `id`; пустой список допустим для ответа об отсутствии данных; поля в [SourceReference](../app/schemas/insights.py)
 - Результат: запись вопроса и ответа с ID, источниками и датой создания
 
 ### Методы для обработчика AI-заданий
@@ -337,7 +351,8 @@ from app.schemas.insights import InsightResult, SourceReference
 
 - `limit`: размер порции, от 1 до 500
 - Получает новости без разметки, вызывает LLM, сохраняет `NewsFeatures` с проверкой исходных текста и даты
-- Ошибочная версия получает статус `failed` и не выбирается следующей порцией; новая версия текста или даты снова попадает в очередь
+- Некорректный результат модели получает статус `failed`; новая версия текста или даты снова попадает в очередь
+- При сетевой ошибке, недоступном провайдере или исчерпанном лимите текущая новость остаётся в очереди, обработка порции прекращается
 - Результат: `news_ids` размеченных новостей и `errors` с ID и кодом ошибки
 - Перед первым запуском требуется синхронизация справочника через `NewsService.sync_tag_catalog()` или обычный запуск `init_db.py`
 - Порции запускаются одним обработчиком; метод не распределяет новости между несколькими одновременно работающими обработчиками
@@ -375,3 +390,55 @@ from app.schemas.insights import InsightResult, SourceReference
 - `save_company_tagging(expected: CompanyData, tags: list[CompanyTagInput]) -> None`: сохранить автоматические темы при неизменившемся профиле, сохранив ручные
 
 Схемы результатов находятся в `app.schemas.tagging`, описание разметчиков: [LLM](../app/services/ai_agents/readme.md)
+
+## ReportService: отчёты и источники
+
+Импорт: `from app.services.reports import ReportService`
+
+- `save_report(report: ReportInput) -> UUID`: сохранить документ и фрагменты одной транзакцией; повтор версии сохраняет прежние ID
+- `import_directory(directory: Path) -> dict`: импортировать подготовленные `*/manifest.json` и страницы; результат содержит `imported`, `skipped`, `errors`
+- `get_chunk(chunk_id: UUID) -> ReportChunkData`: получить текст, страницу, сведения OCR и метаданные документа; неизвестный ID вызывает `LookupError`
+- `corpus_version() -> str`: получить хэш готового корпуса для кеша агента
+
+Входные схемы: `from app.schemas.reports import ReportInput, ReportPart`. Исходные PDF сервис не распознаёт и не удаляет. Поиск по корпусу: `InsightService.search_reports(query, limit=5)`.
+
+## MarketService: биржа
+
+Импорт: `from app.services.market import MarketService`
+
+- `refresh() -> int`: загрузить MOEX вне транзакции, сохранить срез и вернуть число котировок; вызывается воркером
+- `get_overview(*, limit=20) -> MarketOverview`: получить сохранённую карту и лидеров изменения; `limit` от 1 до 100; сетевого запроса не делает
+
+Поля ответа описаны в `app.schemas.market`. Пустая БД возвращает `empty`, старые данные или ошибка обновления дают `stale`.
+
+## QuestionService: уточнения по разбору
+
+Импорт: `from app.services.questions import QuestionService`
+
+- `await ask(user_id, analysis_id, conversation_id, question) -> QuestionData`: проверить доступ, получить ответ агента, проверить цитаты и сохранить вопрос с ответом
+- `user_id`, `analysis_id`, `conversation_id`: UUID
+- `question`: от 1 до 1000 символов
+- Одновременно допускается один запрос пользователя; сразу после завершения действует пауза 10 секунд
+- История: последние пять сообщений той же беседы; источники: сохранённый разбор
+- При смене компании во время обработки ответ не сохраняется; при ошибке проверки модели возвращается `RuntimeError`
+
+## AnalysisAgent: создание разбора
+
+Импорт: `from app.services.ai_agents.analysis import AnalysisAgent`
+
+- `await get_versions() -> AnalysisVersions`: версии модели, промпта, корпуса и поиска
+- `await analyze(work: AnalysisWork) -> AnalysisOutput`: план, поиск, генерация, проверка и одна возможная коррекция; результат содержит `result`, `status`, `trace`
+- `await answer(analysis: AnalysisData, history: list[QuestionData], question: str)`: текст ответа и список источников; в API использовать через `QuestionService.ask`
+
+Воркер получает `AnalysisWork` через `InsightService.prepare_job` и завершает задание через `complete_job`. Модель возвращает компактный `AnalysisDraft` с выбранными `evidence_ids`; ID, метаданные источников и дословные цитаты добавляет сервер. Схема публичного результата остаётся `InsightResult`. Лимиты модели и запуск описаны в [инструкции воркера](worker.md).
+
+## Дополнительные методы
+
+- `ProfileService.list_companies(limit=50, offset=0, query="")`: поиск по ID, отрасли, городу и региону
+- `ProfileService.get_context(user_id)`: сохранённый снимок фактов о выбранной компании
+- `InsightService.get_analysis_context(user_id: UUID, analysis_id: UUID) -> ContextData`: признаки компании на момент сохранённого разбора; импорт `from app.services import InsightService`; не подменяет их текущим профилем, чужая компания вызывает `PermissionError`
+- `ProfileService.pending_tagging(version, limit=2)`: компании пользователей, требующие разметки
+- `FeedbackService.report_tags(user_id, news_id, *, snapshot_id, wrong_tag_ids, suggested_tag_ids)`: сообщение об ошибке тематических меток с проверкой доступности снимка
+- `RuntimeService.get(key)`: последнее состояние фонового процесса; импорт `from app.services.runtime import RuntimeService`
+
+Ключи состояний для чтения: `worker`, `market`, `llm_budget`. Запись служебных состояний выполняется воркером и клиентами LLM.

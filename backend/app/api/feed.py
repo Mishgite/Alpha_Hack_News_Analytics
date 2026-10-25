@@ -4,7 +4,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.schemas.api import FeedRequest, ImpressionRequest, ReactionRequest
+from app.schemas.api import (
+    FeedRequest,
+    ImpressionRequest,
+    NewsOpenRequest,
+    ReactionRequest,
+    TagFeedbackRequest,
+)
 from app.schemas.database import InteractionData, ReactionCounts, SnapshotPage, UserData
 from app.schemas.news import StoredNews
 from app.services import FeedbackService, FeedService, NewsService
@@ -72,3 +78,25 @@ def record_impression(
 ):
     """сохраняет показ новости, повторный event_id не создаёт второй показ"""
     return service.record_impression(user_id=user.id, **data.model_dump())
+
+
+@router.post("/news/{news_id}/open", response_model=InteractionData)
+def record_open(
+    news_id: UUID,
+    data: NewsOpenRequest,
+    user: UserData = Depends(get_current_user),
+    service: FeedbackService = Depends(get_feedback_service),
+):
+    """сохраняет открытие новости из ленты, обычное чтение GET событие не создаёт"""
+    return service.record_open(user_id=user.id, news_id=news_id, **data.model_dump())
+
+
+@router.post("/news/{news_id}/tag-feedback", status_code=201)
+def report_tags(
+    news_id: UUID,
+    data: TagFeedbackRequest,
+    user: UserData = Depends(get_current_user),
+    service: FeedbackService = Depends(get_feedback_service),
+):
+    """сохраняет ошибку тегирования без изменения интересов пользователя"""
+    return service.report_tags(user.id, news_id, **data.model_dump())

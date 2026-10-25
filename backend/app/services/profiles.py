@@ -83,10 +83,12 @@ class ProfileService:
         self.policy = (policy or ProfilePolicy()).model_copy(deep=True)
         self._uow = uow_factory
 
-    def list_companies(self, *, limit: int = 50, offset: int = 0) -> list[CompanyData]:
+    def list_companies(
+        self, *, limit: int = 50, offset: int = 0, query: str = ""
+    ) -> list[CompanyData]:
         """возвращает страницу компаний для выбора, отсортированную по ID"""
         with self._uow() as db:
-            return db.companies.list(limit=limit, offset=offset)
+            return db.companies.list(limit=limit, offset=offset, query=query)
 
     def save_company(self, company: CompanyData) -> CompanyData:
         """создаёт компанию или заменяет её профиль целиком данными импорта"""
@@ -94,6 +96,23 @@ class ProfileService:
         required(company.profile_version, "profile_version")
         with self._uow() as db:
             result = db.companies.save(company)
+            db.commit()
+            return result
+
+    def create_companies(self, companies: list[CompanyData]) -> list[str]:
+        """добавляет до 500 компаний одной транзакцией, возвращает ID только новых записей"""
+        if len(companies) > 500:
+            raise ValueError("A batch cannot contain more than 500 companies")
+        if not companies:
+            return []
+        for company in companies:
+            required(company.id, "company_id")
+            required(company.profile_version, "profile_version")
+        ids = [company.id for company in companies]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate company IDs in batch")
+        with self._uow() as db:
+            result = db.companies.create_many(companies)
             db.commit()
             return result
 
@@ -189,3 +208,18 @@ class ProfileService:
     def get_ranking_profile(self, user_id: UUID) -> RankingProfile:
         """возвращает профиль с весами тем, рассчитанными по текущим настройкам и реакциям"""
         return build_profile(self.get_profile(user_id), self.policy)
+
+    def pending_tagging(self, version, limit=2):
+        """возвращает ограниченную порцию профилей для фонового разметчика"""
+        with self._uow() as db:
+            return db.companies.pending_tagging(version, limit)
+
+    def get_context(self, user_id):
+        """возвращает снимок признаков выбранной компании для интерфейса доказательств"""
+        with self._uow() as db:
+            profile = db.users.get_profile_inputs(user_id)
+            from ._common import company_context
+
+            result = company_context(db, profile.company)
+            db.commit()
+            return result

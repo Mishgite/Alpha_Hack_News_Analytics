@@ -38,6 +38,14 @@ class ReactionRequest(ServiceInput):
     reaction: Reaction
 
 
+class NewsOpenRequest(ServiceInput):
+    """связывает открытие с новостью из снимка ленты"""
+
+    event_id: UUID
+    snapshot_id: UUID
+    occurred_at: AwareDatetime
+
+
 class ImpressionRequest(ServiceInput):
     """передаёт показ новости с уникальным ID для защиты от повторной записи"""
 
@@ -45,3 +53,24 @@ class ImpressionRequest(ServiceInput):
     snapshot_id: UUID
     news_id: UUID
     occurred_at: AwareDatetime
+
+
+class TagFeedbackRequest(ServiceInput):
+    """связывает жалобу на темы с просмотренным снимком ленты"""
+
+    snapshot_id: UUID
+    wrong_tag_ids: list[str] = Field(default_factory=list, max_length=50)
+    suggested_tag_ids: list[str] = Field(default_factory=list, max_length=50)
+
+
+class AnalysisRequest(ServiceInput):
+    """один ключ соответствует одной пользовательской попытке запуска разбора"""
+
+    idempotency_key: str = Field(min_length=1, max_length=200)
+
+
+class QuestionRequest(ServiceInput):
+    """передаёт вопрос в конкретный диалог по разбору"""
+
+    conversation_id: UUID
+    question: str = Field(min_length=1, max_length=1000)

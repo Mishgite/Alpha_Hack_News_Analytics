@@ -44,11 +44,15 @@ def check_database(connection: Connection) -> int:
 def initialize_database(engine: Engine) -> bool:
     """создаёт схему в пустой базе одной транзакцией, возвращает True при создании
 
-    если таблицы уже есть, только проверяет их наличие и триггер
+    если таблицы уже есть, добавляет служебную таблицу состояний и проверяет схему
     при неполной схеме вызывает ValueError, существующие записи не меняет
     """
     with engine.begin() as connection:
         if inspect(connection).get_table_names(schema="public"):
+            # новые служебные таблицы добавляются без изменения существующих записей
+            from app.infrastructure.database.models.runtime import ProcessingState
+
+            ProcessingState.__table__.create(connection, checkfirst=True)
             check_database(connection)
             return False
 
@@ -62,6 +66,9 @@ def initialize_database(engine: Engine) -> bool:
             text("SELECT pg_catalog.set_config('search_path', :path, false)"),
             {"path": search_path},
         )
+        from app.infrastructure.database.models.runtime import ProcessingState
+
+        ProcessingState.__table__.create(connection, checkfirst=True)
         check_database(connection)
     return True
 

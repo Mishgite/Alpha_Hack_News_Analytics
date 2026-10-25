@@ -18,7 +18,7 @@ from app.schemas.tagging import ProfileForTagging, ProfileTags
 from app.services.tag_catalog import load_catalog
 
 from . import NewsTagger, ProfileTagger, add_bad_news, load_bad_news
-from ._common import model_object, validate_configuration
+from ._common import model_object, prompt_catalog, prompt_json, validate_configuration
 
 CATALOG = {
     "city": {"Москва": "mos"},
@@ -63,6 +63,40 @@ class TaggerFixtures(unittest.TestCase):
 
 
 class TaggerTests(TaggerFixtures):
+    def test_prompt_catalog_preserves_every_name_and_code(self):
+        for catalog in (CATALOG, load_catalog()):
+            compact = prompt_catalog(catalog)
+            restored = dict(compact["city"])
+            regions = {code: name for name, code in compact["region"].items()}
+            for region, cities in compact["cities_by_region"].items():
+                english_region, russian_region = regions[region].split(" / ", 1)
+                for name, code in cities.items():
+                    english, russian = name.split(" / ", 1)
+                    full_name = (
+                        f"{english} ({english_region}) / {russian} ({russian_region})"
+                    )
+                    self.assertNotIn(full_name, restored)
+                    restored[full_name] = code
+            self.assertEqual(restored, catalog["city"])
+            self.assertEqual(compact["region"], catalog["region"])
+            self.assertEqual(compact["business"], catalog["business"])
+
+    def test_unknown_region_is_not_guessed_from_city_code(self):
+        catalog = {
+            **CATALOG,
+            "city": {"City (Unknown) / Город (Неизвестный)": "city_77000001"},
+        }
+        compact = prompt_catalog(catalog)
+        self.assertEqual(compact["city"], catalog["city"])
+        self.assertEqual(compact["cities_by_region"], {})
+
+    def test_compact_json_preserves_text_and_schema(self):
+        value = {
+            "text": "Текст  с пробелами\nи новой строкой",
+            "schema": ProfileTags.model_json_schema(),
+        }
+        self.assertEqual(json.loads(prompt_json(value)), value)
+
     def test_typed_news_and_source_identity(self):
         result = self.tagger(OUTPUT).tag(self.news)
         self.assertIsInstance(result, NewsFeatures)
@@ -194,6 +228,7 @@ class TaggerTests(TaggerFixtures):
                 },
             ),
             patch(__package__ + "._common.build_opener") as opener,
+            patch("app.services.runtime.RuntimeService"),
         ):
             opener.return_value.open.side_effect = HTTPError(
                 "url", 401, "secret body", {}, None

@@ -1,21 +1,60 @@
 """чтение сохранённых разборов, заданий и истории уточнений"""
 
+import hashlib
+from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 
-from app.schemas.database import AnalysisData, JobData, QuestionData, UserData
+from app.schemas.api import AnalysisRequest, QuestionRequest
+from app.schemas.database import AnalysisData, ContextData, JobData, QuestionData, UserData
 from app.services import InsightService
+from app.services.questions import QuestionService
+from app.services.reports import ReportService
+from app.services.runtime import RuntimeService
 
 from .dependencies import get_current_user, get_insight_service
 
 router = APIRouter(tags=["AI-разбор"])
 
 
-@router.post("/news/{news_id}/analysis", status_code=501)
-def request_analysis(news_id: UUID, user: UserData = Depends(get_current_user)):
-    """сообщает, что обработчик AI ещё не подключён, не создаёт зависшее задание"""
-    raise HTTPException(501, "AI analysis is not connected yet")
+def get_runtime_service():
+    """предоставляет состояние фонового обработчика"""
+    return RuntimeService()
+
+
+def get_report_service():
+    """предоставляет сервис источников аналитики"""
+    return ReportService()
+
+
+def get_question_service():
+    """предоставляет сервис уточняющих вопросов"""
+    return QuestionService()
+
+
+@router.post("/news/{news_id}/analysis", status_code=202, response_model=JobData)
+def request_analysis(
+    news_id: UUID,
+    data: AnalysisRequest,
+    user: UserData = Depends(get_current_user),
+    service: InsightService = Depends(get_insight_service),
+    runtime: RuntimeService = Depends(get_runtime_service),
+):
+    """ставит разбор в очередь только при доступном worker с настроенной моделью"""
+    state = runtime.get("worker")
+    if (
+        not state
+        or (datetime.now(UTC) - state["updated_at"]).total_seconds() > 60
+        or state["value"].get("status") != "running"
+        or not state["value"].get("analysis_enabled")
+    ):
+        raise HTTPException(503, "Analysis worker unavailable")
+    return service.request_analysis(
+        user.id, news_id, idempotency_key=data.idempotency_key
+    )
 
 
 @router.get("/analysis-jobs/{job_id}", response_model=JobData)
@@ -51,3 +90,96 @@ def get_history(
 ):
     """возвращает сохранённые сообщения из диалога текущего пользователя"""
     return service.get_history(user.id, analysis_id, conversation_id, limit=limit)
+
+
+@router.post("/analyses/{analysis_id}/questions", response_model=QuestionData)
+async def ask_question(
+    analysis_id: UUID,
+    data: QuestionRequest,
+    user: UserData = Depends(get_current_user),
+    service: QuestionService = Depends(get_question_service),
+):
+    """возвращает и сохраняет проверенный ответ в контексте исходного разбора"""
+    return await service.ask(user.id, analysis_id, data.conversation_id, data.question)
+
+
+@router.get("/analyses/{analysis_id}/trace")
+def get_trace(
+    analysis_id: UUID,
+    user: UserData = Depends(get_current_user),
+    service: InsightService = Depends(get_insight_service),
+):
+    """показывает выполненные шаги и ID источников после проверки доступа"""
+    return service.get_analysis(user.id, analysis_id).trace
+
+
+@router.get("/analyses/{analysis_id}/context", response_model=ContextData)
+def get_analysis_context(
+    analysis_id: UUID,
+    user: UserData = Depends(get_current_user),
+    service: InsightService = Depends(get_insight_service),
+):
+    """возвращает снимок признаков, на которые опирался сохранённый разбор"""
+    return service.get_analysis_context(user.id, analysis_id)
+
+
+@router.get("/report-chunks/{chunk_id}")
+def get_report_chunk(
+    chunk_id: UUID,
+    user: UserData = Depends(get_current_user),
+    service: ReportService = Depends(get_report_service),
+):
+    """возвращает цитируемый фрагмент, страницу и сведения о распознавании"""
+    return service.get_chunk(chunk_id)
+
+
+@router.get("/report-chunks/{chunk_id}/document")
+def get_report_document(
+    chunk_id: UUID,
+    user: UserData = Depends(get_current_user),
+    service: ReportService = Depends(get_report_service),
+):
+    """отдаёт исходный PDF только из локального каталога отчётов"""
+    chunk = service.get_chunk(chunk_id)
+    root = Path(__file__).resolve().parents[2] / "data/reports"
+    target = (root / chunk.filename).resolve()
+    if (
+        target.parent != root.resolve()
+        or target.suffix.lower() != ".pdf"
+        or not target.is_file()
+    ):
+        raise HTTPException(404, "Source PDF is not available")
+    expected_hash = (chunk.source_span_json or {}).get("original_sha256")
+    if expected_hash:
+        try:
+            with target.open("rb") as source:
+                actual_hash = hashlib.file_digest(source, "sha256").hexdigest()
+        except FileNotFoundError:
+            raise HTTPException(404, "Source PDF is not available") from None
+        except OSError:
+            raise HTTPException(503, "Source PDF could not be read") from None
+        if actual_hash != expected_hash:
+            raise HTTPException(409, "Source PDF differs from the cited version")
+    return FileResponse(target, media_type="application/pdf", filename=target.name)
+
+
+@router.get("/status")
+def get_processing_status(
+    user: UserData = Depends(get_current_user),
+    runtime: RuntimeService = Depends(get_runtime_service),
+):
+    """сообщает фронтенду доступность worker и последнее состояние биржевого источника"""
+    state = runtime.get("worker")
+    alive = bool(
+        state
+        and state["value"].get("status") == "running"
+        and (datetime.now(UTC) - state["updated_at"]).total_seconds() <= 60
+    )
+    return {
+        "database": "ready",
+        "worker_alive": alive,
+        "analysis_available": bool(alive and state["value"].get("analysis_enabled")),
+        "ranking": "formula-v1",
+        "market": runtime.get("market"),
+        "llm_budget": runtime.get("llm_budget"),
+    }

@@ -1,4 +1,4 @@
-"""временная формула для проверки API до подключения обученной модели"""
+"""ранжирование по совпадению тем и свежести до обучения модели"""
 
 from app.schemas.ranking import RankedNews, RankingRequest, RankingResult
 
@@ -9,7 +9,7 @@ def rank_news(request: RankingRequest) -> RankingResult:
     паттерн Strategy: функцию получает FeedService, замена модели не меняет API
     совпадение считается по самой подходящей теме
     свежесть равна 1 / (1 + возраст в днях)
-    итог содержит 80% совпадения и 20% свежести, это заглушка без обучения
+    итог содержит 80% совпадения и 20% свежести, это формула без обучения
     """
     items = []
     for candidate in request.candidates:
@@ -35,11 +35,13 @@ def rank_news(request: RankingRequest) -> RankingResult:
                 final_score=0.8 * match + 0.2 * freshness,
                 matched_signals=matched,
                 reason=(
-                    "Тестовое ранжирование: совпали темы " + ", ".join(matched)
+                    "Совпали темы профиля: " + ", ".join(matched)
                     if matched
-                    else "Тестовое ранжирование: совпадений тем нет, учтена свежесть"
+                    else "Совпадений тем нет, учтена свежесть"
                 ),
             )
         )
     items.sort(key=lambda item: (-item.final_score, str(item.news_id)))
-    return RankingResult(method="weighted_formula_v1", version="stub-v1", items=items)
+    return RankingResult(
+        method="weighted_formula_v1", version="formula-v1", items=items
+    )

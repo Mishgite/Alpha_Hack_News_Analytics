@@ -9,6 +9,8 @@ from app.infrastructure.database.models import (
     FeedSnapshot,
     FeedSnapshotItem,
     News,
+    NewsSource,
+    NewsTag,
 )
 from app.infrastructure.database.repositories.profiles import (
     _require_company_access,
@@ -63,6 +65,19 @@ class FeedRepository:
         }
         if set(news) != set(ids):
             raise LookupError("News not found")
+        qualities = {
+            (row.news_id, row.tag_id): float(row.quality_weight)
+            for row in self._session.scalars(
+                select(NewsTag).where(NewsTag.news_id.in_(ids))
+            )
+        }
+        source_kinds = dict(
+            self._session.execute(
+                select(NewsSource.code, NewsSource.kind).where(
+                    NewsSource.code.in_({row.canonical_source for row in news.values()})
+                )
+            ).all()
+        )
         snapshot = FeedSnapshot(
             user_id=user.id,
             company_id=user.company_id,
@@ -93,6 +108,28 @@ class FeedRepository:
                     ranking_details={
                         "reason": item.reason,
                         "matched_signals": item.matched_signals,
+                        # признаки фиксируются до реакции, чтобы обучение не читало будущие изменения
+                        "training_features": {
+                            "schema_version": 1,
+                            "content_hash": article.content_hash,
+                            "tagging_version": article.tagging_version,
+                            "synthetic": bool(
+                                context.payload_json.get("profile_json", {}).get(
+                                    "synthetic"
+                                )
+                            )
+                            or source_kinds.get(article.canonical_source) == "demo",
+                            "tags": [
+                                {
+                                    "id": tag["id"],
+                                    "confidence": tag["confidence"],
+                                    "quality_weight": qualities.get(
+                                        (article.id, tag["id"]), 1.0
+                                    ),
+                                }
+                                for tag in features.get("tags", [])
+                            ],
+                        },
                     },
                     # копируем отображаемые поля, чтобы правки новости не меняли уже выданную ленту
                     features_json={
@@ -138,9 +175,21 @@ class FeedRepository:
                 .limit(limit + 1)
             )
         )
+        from app.infrastructure.database.models.news import UserReaction
+
+        reactions = dict(
+            self._session.execute(
+                select(UserReaction.news_id, UserReaction.reaction).where(
+                    UserReaction.user_id == user_id,
+                    UserReaction.news_id.in_([r.news_id for r in rows]),
+                )
+            ).all()
+        )
+        snapshot = self._session.get(FeedSnapshot, snapshot_id)
         entries = [
             FeedEntry(
                 position=row.position,
+                my_reaction=reactions.get(row.news_id, "none"),
                 ranking=RankedNews(
                     news_id=row.news_id,
                     match_score=row.match_score,
@@ -154,6 +203,8 @@ class FeedRepository:
         ]
         return SnapshotPage(
             snapshot_id=snapshot_id,
+            generated_at=snapshot.created_at,
+            expires_at=snapshot.expires_at,
             items=entries,
             has_more=len(rows) > limit,
             next_position=rows[limit].position if len(rows) > limit else None,

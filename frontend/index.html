@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#ef3124" />
+    <title>Бизнес-инсайты · Альфа</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("alfa-theme") ||
+          (matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ef3124'/%3E%3Ctext x='6' y='24' font-family='Arial' font-weight='bold' font-size='25' fill='white'%3EA%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">К содержимому</a>
+    <aside class="sidebar">
+      <a class="brand" href="#home" aria-label="Альфа-Бизнес, главная"
+        ><span class="brand-mark">А<span></span></span
+        ><span>Альфа<span class="brand-sub">Бизнес</span></span></a
+      >
+      <span class="nav-caption">БИЗНЕС-КАБИНЕТ</span>
+      <nav aria-label="Основная навигация">
+        <a href="#home" data-nav="home"><span data-icon="home"></span>Обзор</a>
+        <a href="#news" data-nav="news"
+          ><span data-icon="document"></span>Бизнес-инсайты</a
+        >
+        <a href="#market" data-nav="market"
+          ><span data-icon="chart"></span>Биржевой обзор</a
+        >
+      </nav>
+      <div class="sidebar-note">
+        <span class="tiny-dot"></span>Прототип хакатона
+        <p>Синтетические данные<br />Без банковских операций</p>
+      </div>
+      <button class="sidebar-settings" data-action="scenarios">
+        <span data-icon="sliders"></span>Сценарии демо
+      </button>
+    </aside>
+    <div class="shell">
+      <aside
+        class="demo-controls"
+        aria-label="Управление демонстрацией, вне интерфейса приложения"
+      >
+        <div>
+          <strong>Панель демонстрации</strong
+          ><span>Не часть банковского приложения</span>
+        </div>
+        <button data-action="demo-role">
+          Выбрать роль для демо <span aria-hidden="true">↗</span>
+        </button>
+      </aside>
+      <header class="topbar">
+        <a href="#home" class="mobile-brand">А<span>Бизнес</span></a
+        ><span class="top-label"
+          >Альфа-Бизнес <span>/</span> Бизнес-инсайты</span
+        >
+        <div class="header-actions">
+          <span class="demo-pill">Учебный режим</span
+          ><button
+            class="icon-button theme-button"
+            data-action="theme"
+            aria-label="Включить тёмную тему"
+            title="Сменить тему"
+          ></button
+          ><button class="profile-button" data-action="settings">
+            <span data-icon="people"></span><span>Мой профиль</span>
+          </button>
+        </div>
+      </header>
+      <main id="main" tabindex="-1"></main>
+      <footer>
+        <span>Концепт сервиса для Альфа-Бизнеса</span
+        ><button class="text-button" data-action="scenarios">
+          Демонстрационные сценарии
+        </button>
+      </footer>
+    </div>
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <a href="#home" data-nav="home"><span data-icon="home"></span>Обзор</a
+      ><a href="#news" data-nav="news"
+        ><span data-icon="document"></span>Инсайты</a
+      ><a href="#market" data-nav="market"
+        ><span data-icon="chart"></span>Биржа</a
+      ><button data-action="settings">
+        <span data-icon="people"></span>Профиль
+      </button>
+    </nav>
+    <dialog id="panel" class="drawer" aria-labelledby="panel-title">
+      <header class="dialog-head">
+        <div>
+          <span class="eyebrow" id="panel-caption"></span>
+          <h2 id="panel-title"></h2>
+        </div>
+        <button class="icon-button" data-close aria-label="Закрыть панель">
+          <span data-icon="close"></span>
+        </button>
+      </header>
+      <div id="panel-body" class="dialog-body"></div>
+    </dialog>
+    <noscript>Для работы приложения необходимо включить JavaScript</noscript>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

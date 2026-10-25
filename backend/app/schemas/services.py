@@ -10,6 +10,7 @@ from pydantic import (
     HttpUrl,
     SecretStr,
     TypeAdapter,
+    field_validator,
     model_validator,
 )
 
@@ -25,27 +26,36 @@ class ServiceInput(BaseModel):
         extra="forbid", str_strip_whitespace=True, allow_inf_nan=False
     )
 
+    @field_validator("*")
+    @classmethod
+    def reject_null_characters(cls, value):
+        """отклоняет нулевой символ, который PostgreSQL не принимает в текстовых полях"""
+        items = value if isinstance(value, list) else [value]
+        if any(isinstance(item, str) and "\x00" in item for item in items):
+            raise ValueError("Text must not contain null characters")
+        return value
+
 
 class Registration(ServiceInput):
     """данные деморегистрации: существующая компания, город и должность пользователя"""
 
-    company_id: str = Field(min_length=1)
-    city: str = Field(min_length=1)
+    company_id: str = Field(min_length=1, max_length=200)
+    city: str = Field(min_length=1, max_length=200)
     job_role: JobRole = "other"
 
 
 class UserSettings(ServiceInput):
     """город и должность, которые пользователь может изменить"""
 
-    city: str = Field(min_length=1)
+    city: str = Field(min_length=1, max_length=200)
     job_role: JobRole
 
 
 class Interests(ServiceInput):
     """списки личных и отключённых тегов для полной замены настроек интересов"""
 
-    personal: list[str]
-    disabled: list[str]
+    personal: list[str] = Field(max_length=500)
+    disabled: list[str] = Field(max_length=500)
 
 
 class SessionGrant(BaseModel):

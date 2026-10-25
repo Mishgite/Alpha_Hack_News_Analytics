@@ -25,3 +25,9 @@ dist/
 # Local tagging locks and migration backups
 backend/app/bad_news.json.lock
 backend/app/*.json.bak
+
+# local hackathon materials and processing results
+/backend/data/**
+!/backend/data/**/
+!/backend/data/**/.gitkeep
+!/backend/data/examples/recent-news-2026-10-25.json

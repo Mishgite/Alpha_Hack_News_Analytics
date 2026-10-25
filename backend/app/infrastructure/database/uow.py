@@ -8,11 +8,13 @@ from app.infrastructure.database.repositories.analytics import (
 )
 from app.infrastructure.database.repositories.feed import FeedRepository
 from app.infrastructure.database.repositories.feedback import FeedbackRepository
+from app.infrastructure.database.repositories.market import MarketRepository
 from app.infrastructure.database.repositories.news import NewsRepository
 from app.infrastructure.database.repositories.profiles import (
     CompanyRepository,
     UserRepository,
 )
+from app.infrastructure.database.repositories.runtime import RuntimeRepository
 from app.infrastructure.database.session import get_engine, make_session_factory
 
 
@@ -38,6 +40,8 @@ class UnitOfWork:
         self.feedback = FeedbackRepository(self._session)
         self.analyses = AnalysisRepository(self._session)
         self.reports = ReportRepository(self._session)
+        self.runtime = RuntimeRepository(self._session)
+        self.market = MarketRepository(self._session)
         return self
 
     def commit(self):

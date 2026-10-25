@@ -64,7 +64,14 @@ class NewsPipeline:
                     expected_published_at=article.published_at,
                 )
                 result.news_ids.append(article.news_id)
-            except (ValueError, RuntimeError, OSError) as error:
+            except (RuntimeError, OSError) as error:
+                # при недоступности модели или исчерпании лимита новости остаются pending
+                result.errors.append(
+                    ProcessingError(news_id=article.news_id, code=type(error).__name__)
+                )
+                logger.warning("News tagging paused: %s", type(error).__name__)
+                break
+            except ValueError as error:
                 self.news.mark_tagging_failed(article)
                 result.errors.append(
                     ProcessingError(news_id=article.news_id, code=type(error).__name__)

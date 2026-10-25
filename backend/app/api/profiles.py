@@ -22,12 +22,13 @@ def list_companies(
     request: Request,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    query: str = Query("", max_length=150),
     service: ProfileService = Depends(get_profile_service),
 ):
     """возвращает компании для демовхода, без утверждения реальных банковских прав"""
     if not request.app.state.settings.demo_enabled:
         raise HTTPException(403, "Demo company catalogue is disabled")
-    return service.list_companies(limit=limit, offset=offset)
+    return service.list_companies(limit=limit, offset=offset, query=query)
 
 
 @router.post("/auth/demo", response_model=SessionResponse, status_code=201)
@@ -109,3 +110,23 @@ def list_tags(
 ):
     """возвращает доступные темы для выбора интересов"""
     return service.list_tags()
+
+
+@router.get("/profile/context")
+def get_context(
+    user: UserData = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+):
+    """возвращает известные признаки компании и сведения об их происхождении"""
+    return service.get_context(user.id)
+
+
+@router.get("/profile/priorities")
+def get_priorities(
+    user: UserData = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+):
+    """возвращает эффективные веса тем с учётом роли, интересов и реакций"""
+    from app.services.profiles import build_profile
+
+    return build_profile(service.get_profile(user.id), service.policy)

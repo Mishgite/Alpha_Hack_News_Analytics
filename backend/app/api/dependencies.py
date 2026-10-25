@@ -11,14 +11,15 @@ from app.services import (
     NewsService,
     ProfileService,
 )
-from app.services.ranking_stub import rank_news
+from app.services.profile_policy import default_policy
+from app.services.ranking import rank_news
 
 bearer = HTTPBearer(auto_error=False)
 
 
 def get_profile_service() -> ProfileService:
     """внедрение зависимостей: предоставляет сервис профилей обработчику запроса"""
-    return ProfileService()
+    return ProfileService(policy=default_policy())
 
 
 def get_news_service() -> NewsService:
@@ -27,10 +28,11 @@ def get_news_service() -> NewsService:
 
 
 def get_feed_service() -> FeedService:
-    """подключает временный ранжировщик к существующему сервису ленты"""
+    """подключает ранжирование по формуле к существующему сервису ленты"""
     return FeedService(
         ranker=rank_news,
-        ranking_config_version="stub-v1",
+        policy=default_policy(),
+        ranking_config_version="formula-v1",
         feature_schema_version="news-features-v2",
     )
 
