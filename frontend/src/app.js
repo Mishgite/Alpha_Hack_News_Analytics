@@ -62,7 +62,7 @@ const tag = (id) => `<span class="tag">${esc(tagName(id))}</span>`;
 const state = {
   profile: null,
   feed: null,
-  days: 7,
+  days: null,
   analysis: null,
   article: null,
   market: null,
@@ -195,7 +195,7 @@ async function home() {
     </div>`;
   try {
     if (!state.feed || Date.parse(state.feed.expires_at) <= Date.now()) {
-      const result = await api.request("POST", "/api/feed", { days: state.days, page_size: 20 });
+      const result = await api.request("POST", "/api/feed", { days: state.days ?? 7, page_size: 20 });
       if (token !== generation) return;
       state.feed = result;
     }
@@ -264,7 +264,7 @@ function feedBody() {
   if (!f) return;
   $("#feed-results").innerHTML = f.items.length
     ? `<div class="feed-list">${f.items.map(feedCard).join("")}</div><div class="pagination">${f.has_more ? '<button class="button secondary" data-action="more">Показать ещё 20 ' + icon("plus") + "</button>" : "<span>Конец подборки</span>"}<span>Показано ${f.items.length} · Обновлено ${date(f.generated_at)}</span></div>`
-    : `<div class="empty-state">${icon("document")}<h2>За этот период новостей нет</h2><p>${state.days < 30 ? "Попробуйте расширить период подборки" : "Подходящих новостей пока нет. Можно изменить темы или вернуться позже"}</p>${state.days < 30 ? '<button class="button secondary" data-action="expand-period">Показать за 30 дней</button>' : '<a class="button secondary" href="#interests">Темы подборки</a>'}</div>`;
+    : `<div class="empty-state">${icon("document")}<h2>${state.days === null ? "Подходящих новостей пока нет" : "За этот период новостей нет"}</h2><p>${(state.days ?? 7) < 30 ? "Попробуйте расширить период подборки" : "Подходящих новостей пока нет. Можно изменить темы или вернуться позже"}</p>${(state.days ?? 7) < 30 ? '<button class="button secondary" data-action="expand-period">Показать за 30 дней</button>' : '<a class="button secondary" href="#interests">Темы подборки</a>'}</div>`;
   observeImpressions();
 }
 async function feed(reuse = false) {
@@ -273,18 +273,9 @@ async function feed(reuse = false) {
       "Бизнес-инсайты",
       "Новости, которые стоит проверить в контексте вашей компании",
     ) +
-    `<div class="feed-toolbar"><div><h2>Новости для вас</h2></div><div class="toolbar-actions"><label class="period-label">Период<select id="period" aria-label="Период новостей">${[
-      [1, "За сутки"],
-      [7, "За 7 дней"],
-      [30, "За 30 дней"],
-    ]
-      .map(
-        ([v, n]) =>
-          `<option value="${v}" ${state.days === v ? "selected" : ""}>${n}</option>`,
-      )
-      .join(
-        "",
-      )}</select></label><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div><div id="feed-results">${skeleton()}</div>`;
+    `<div class="feed-toolbar"><div><h2>Новости для вас</h2></div><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>
+    <form id="feed-filters" class="feed-filters" hidden><fieldset><legend>Дата публикации</legend><div class="date-options">${[[0, "По умолчанию"], [1, "За сутки"], [7, "За неделю"], [30, "За месяц"]].map(([value, label]) => `<label><input type="radio" name="days" value="${value}" ${(state.days ?? 0) === value ? "checked" : ""}><span>${label}</span></label>`).join("")}</div></fieldset><div class="filter-actions"><button class="button primary" type="submit">Применить</button><button class="text-button" type="button" data-action="reset-feed-filter">Сбросить</button></div></form>
+    ${state.days !== null ? `<div class="active-filters"><button class="filter-chip" data-action="reset-feed-filter" aria-label="Убрать фильтр по дате">${{1: "За сутки", 7: "За неделю", 30: "За месяц"}[state.days]} ${icon("close")}</button></div>` : ""}<div id="feed-results">${skeleton()}</div>`;
   const token = generation;
   try {
     if (
@@ -293,7 +284,7 @@ async function feed(reuse = false) {
       Date.parse(state.feed.expires_at) <= Date.now()
     ) {
       const result = await api.request("POST", "/api/feed", {
-        days: state.days,
+        days: state.days ?? 7,
         page_size: 20,
       });
       if (token !== generation) return;
@@ -968,6 +959,16 @@ document.addEventListener("click", async (e) => {
       await render();
     }
     if (action === "refresh" || action === "retry") await refresh();
+    if (action === "feed-filters") {
+      const filters = $("#feed-filters");
+      filters.hidden = !filters.hidden;
+      b.setAttribute("aria-expanded", String(!filters.hidden));
+    }
+    if (action === "reset-feed-filter") {
+      state.days = null;
+      await refresh();
+      $('[data-action="feed-filters"]')?.focus();
+    }
     if (action === "expand-period") {
       state.days = 30;
       await refresh();
@@ -1086,12 +1087,6 @@ document.addEventListener("click", async (e) => {
     if (b.isConnected) b.disabled = false;
   }
 });
-document.addEventListener("change", async (e) => {
-  if (e.target.id === "period") {
-    state.days = Number(e.target.value);
-    await refresh();
-  }
-});
 document.addEventListener("input", (e) => {
   if (e.target.id === "market-search") {
     marketLimit = 30;
@@ -1133,6 +1128,11 @@ document.addEventListener("submit", async (e) => {
   button.disabled = true;
   form.querySelector(".form-error")?.remove();
   try {
+    if (form.id === "feed-filters") {
+      state.days = Number(body.get("days")) || null;
+      await refresh();
+      $('[data-action="feed-filters"]')?.focus();
+    }
     if (form.id === "login-form") {
       state.profile = null;
       await changeProfile(() => api.request("POST", "/api/auth/demo", {
