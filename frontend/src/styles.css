@@ -2875,11 +2875,10 @@ code {
 .interest-section:first-child { margin-top: 0; }
 
 .feed-preferences { margin-bottom: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
-.feed-preferences > summary { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 14px 18px; font-size: 14px; font-weight: 600; list-style: none; cursor: pointer; }
-.feed-preferences > summary::-webkit-details-marker { display: none; }
-.feed-preferences > summary svg:last-child { margin-left: auto; transition: transform 0.2s; }
-.feed-preferences[open] > summary { border-bottom: 1px solid var(--line); }
-.feed-preferences[open] > summary svg:last-child { transform: rotate(180deg); }
+.feed-preferences[hidden] { display: none; }
+.preferences-toggle svg:last-child { transition: transform 0.2s; }
+.preferences-toggle[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+.preferences-toggle[aria-expanded="true"] { background: var(--surface-2); }
 .feed-preferences form { padding: 20px; }
 .preference-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
 .feed-preferences .interest-section { margin: 0; min-width: 0; }
@@ -2900,4 +2899,4 @@ code {
 .company-picker-heading .icon-button { flex-shrink: 0; background: var(--surface-2); }
 .company-picker #company-results { margin-top: 14px; }
 
-.feed-controls { justify-content: flex-end; }
+.feed-controls { justify-content: space-between; flex-wrap: wrap; }

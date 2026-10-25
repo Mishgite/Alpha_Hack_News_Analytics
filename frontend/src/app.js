@@ -274,8 +274,7 @@ function feedBody() {
 async function feed(reuse = false) {
   main.innerHTML =
     heading("Бизнес-инсайты") +
-    feedPreferences() +
-    `<div class="feed-toolbar feed-controls"><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>
+    `<div class="feed-toolbar feed-controls"><button class="button secondary preferences-toggle" data-action="feed-preferences" aria-expanded="false" aria-controls="feed-preferences">${icon("sliders")}Настроить подборку${icon("chevron")}</button><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>${feedPreferences()}
     <form id="feed-filters" class="feed-filters" hidden><fieldset><legend>Дата публикации</legend><div class="date-options">${[[0, "По умолчанию"], [1, "За сутки"], [7, "За неделю"], [30, "За месяц"]].map(([value, label]) => `<label><input type="radio" name="days" value="${value}" ${(state.days ?? 0) === value ? "checked" : ""}><span>${label}</span></label>`).join("")}</div></fieldset><div class="filter-actions"><button class="button primary" type="submit">Применить</button><button class="text-button" type="button" data-action="reset-feed-filter">Сбросить</button></div></form>
     ${state.days !== null ? `<div class="active-filters"><button class="filter-chip" data-action="reset-feed-filter" aria-label="Убрать фильтр по дате">${{1: "За сутки", 7: "За неделю", 30: "За месяц"}[state.days]} ${icon("close")}</button></div>` : ""}<div id="feed-results">${skeleton()}</div>`;
   const token = generation;
@@ -399,10 +398,14 @@ function feedPreferences() {
   const p = state.profile;
   const selected = new Set(p.personal_tag_ids);
   const option = (t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${selected.has(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`;
-  return `<details class="feed-preferences" id="feed-preferences"><summary>${icon("sliders")}<span>Настроить подборку</span>${icon("chevron")}</summary><form id="interests-form"><div class="preference-columns">
+  return `<section class="feed-preferences" id="feed-preferences" aria-label="Настройки подборки" hidden><form id="interests-form"><div class="preference-columns">
     <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">По деятельности компании</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены</p>'}</div></section>
     <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
-    </div><p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="preference-actions"><button class="button primary" type="submit">Сохранить</button><button class="button ghost" type="button" data-action="cancel-preferences">Отмена</button></div></form></details>`;
+    </div><p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="preference-actions"><button class="button primary" type="submit">Сохранить</button><button class="button ghost" type="button" data-action="cancel-preferences">Отмена</button></div></form></section>`;
+}
+function togglePreferences(open) {
+  $("#feed-preferences").hidden = !open;
+  $('[data-action="feed-preferences"]').setAttribute("aria-expanded", String(open));
 }
 function companyInfo() {
   const c = state.profile.company;
@@ -875,7 +878,7 @@ async function render() {
     if (path === "home") await home();
     else if (path === "news") {
       await feed(true);
-      if (version === generation && openPreferences) $("#feed-preferences").open = true;
+      if (version === generation && openPreferences) togglePreferences(true);
     }
     else if (path === "market") await market();
     else if (path === "demo") await demoSetup();
@@ -990,6 +993,7 @@ document.addEventListener("click", async (e) => {
       await render();
     }
     if (action === "refresh" || action === "retry") await refresh();
+    if (action === "feed-preferences") togglePreferences($("#feed-preferences").hidden);
     if (action === "cancel-preferences") {
       const form = $("#interests-form");
       if (form.querySelector('[type="submit"]').disabled) return;
@@ -997,8 +1001,8 @@ document.addEventListener("click", async (e) => {
       form.querySelectorAll(".searchable-topics label").forEach((label) => label.hidden = false);
       form.querySelector(".tag-search-empty").hidden = true;
       form.querySelector(".form-error")?.remove();
-      $("#feed-preferences").open = false;
-      $("#feed-preferences > summary").focus();
+      togglePreferences(false);
+      $('[data-action="feed-preferences"]').focus();
     }
     if (action === "feed-filters") {
       const filters = $("#feed-filters");
@@ -1213,7 +1217,7 @@ document.addEventListener("submit", async (e) => {
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
-      $("#feed-preferences > summary")?.focus();
+      $('[data-action="feed-preferences"]')?.focus();
       toast("Темы сохранены, подборка обновлена");
     }
     if (form.classList.contains("tag-form")) {
