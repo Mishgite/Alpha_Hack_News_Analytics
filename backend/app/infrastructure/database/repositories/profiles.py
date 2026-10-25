@@ -5,7 +5,7 @@ import json
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -70,14 +70,68 @@ class CompanyRepository:
         row = self._session.get(Company, company_id)
         return CompanyData.model_validate(row) if row else None
 
-    def list(self, *, limit: int = 50, offset: int = 0) -> list[CompanyData]:
+    def list(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        query: str = "",
+        company_ids: tuple[str, ...] | None = None,
+    ) -> list[CompanyData]:
         """возвращает компании по ID с ограничением размера страницы и смещением"""
         if not 1 <= limit <= 100 or offset < 0:
             raise ValueError("Invalid company pagination")
+        statement = select(Company)
+        if company_ids is not None:
+            statement = statement.where(Company.id.in_(company_ids))
+        if query.strip():
+            term = query.strip()
+            statement = statement.where(
+                or_(
+                    *[
+                        field.icontains(term, autoescape=True)
+                        for field in (
+                            Company.id,
+                            Company.okved_name,
+                            Company.okved_code,
+                            Company.industry,
+                            Company.city,
+                            Company.region,
+                        )
+                    ]
+                )
+            )
         rows = self._session.scalars(
-            select(Company).order_by(Company.id).offset(offset).limit(limit)
+            statement.order_by(Company.id).offset(offset).limit(limit)
         )
         return [CompanyData.model_validate(row) for row in rows]
+
+    def pending_tagging(self, version, limit=2):
+        """выбирает компании пользователей с изменённым профилем или отложенной повторной попыткой"""
+        from datetime import timedelta
+
+        from app.infrastructure.database.models.runtime import ProcessingState
+
+        state = ProcessingState
+        statement = (
+            select(Company)
+            .outerjoin(state, state.key == "profile:" + Company.id)
+            .where(
+                select(User.id).where(User.company_id == Company.id).exists(),
+                or_(
+                    state.key.is_(None),
+                    state.value["version"].astext
+                    != Company.profile_version + "|" + version,
+                    (state.value["status"].astext == "failed")
+                    & (state.updated_at < datetime.now(UTC) - timedelta(hours=1)),
+                ),
+            )
+            .order_by(Company.id)
+            .limit(limit)
+        )
+        return [
+            CompanyData.model_validate(row) for row in self._session.scalars(statement)
+        ]
 
     def save(self, company: CompanyData) -> CompanyData:
         """создаёт компанию или заменяет все поля существующей записи по ID, возвращает CompanyData"""
@@ -94,6 +148,18 @@ class CompanyRepository:
             stmt.execution_options(populate_existing=True)
         ).one()
         return CompanyData.model_validate(row)
+
+    def create_many(self, companies: list[CompanyData]) -> list[str]:
+        """добавляет переданные компании и возвращает новые ID, существующие записи не меняет"""
+        if not companies:
+            return []
+        statement = (
+            insert(Company)
+            .values([company.model_dump() for company in companies])
+            .on_conflict_do_nothing(index_elements=[Company.id])
+            .returning(Company.id)
+        )
+        return list(self._session.scalars(statement))
 
     def set_tags(self, company_id: str, tags: list[CompanyTagInput]) -> None:
         """заменяет темы компании после проверки тегов и их происхождения
@@ -121,6 +187,56 @@ class CompanyRepository:
         )
         self._session.add_all(
             [CompanyTag(company_id=company_id, **tag.model_dump()) for tag in tags]
+        )
+        self._session.flush()
+
+    def seed_tags_if_empty(self, expected: CompanyData, tags: list[CompanyTagInput]) -> bool:
+        """добавляет начальные темы под блокировкой компании, существующую разметку не заменяет"""
+        company = self._session.scalar(
+            select(Company).where(Company.id == expected.id).with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if company is None:
+            raise LookupError("Company not found")
+        if CompanyData.model_validate(company) != expected:
+            raise ValueError("Company changed during tagging")
+        if not tags or self._session.scalar(
+            select(CompanyTag.tag_id).where(CompanyTag.company_id == expected.id).limit(1)
+        ) is not None:
+            return False
+        self.save_company_tagging(expected, tags)
+        return True
+
+    def save_company_tagging(
+        self, expected: CompanyData, tags: list[CompanyTagInput]
+    ) -> None:
+        """сохраняет автоматические темы при неизменном профиле, оставляет ручные темы"""
+        company = self._session.scalar(
+            select(Company)
+            .where(Company.id == expected.id)
+            .with_for_update(key_share=True)
+            .execution_options(populate_existing=True)
+        )
+        if company is None:
+            raise LookupError("Company not found")
+        if CompanyData.model_validate(company) != expected:
+            raise ValueError("Company changed during tagging")
+        if any(tag.origin != "rule" for tag in tags):
+            raise ValueError("Automatic tagging requires rule origin")
+        ids = {tag.tag_id for tag in tags}
+        active = set(
+            self._session.scalars(select(Tag.id).where(Tag.id.in_(ids), Tag.active))
+        )
+        if ids != active or len(ids) != len(tags):
+            raise ValueError("Unknown, inactive or duplicate tag")
+        self._session.execute(
+            delete(CompanyTag).where(
+                CompanyTag.company_id == expected.id,
+                CompanyTag.origin == "rule",
+            )
+        )
+        self._session.add_all(
+            [CompanyTag(company_id=expected.id, **tag.model_dump()) for tag in tags]
         )
         self._session.flush()
 
@@ -235,11 +351,13 @@ class UserRepository:
         return UserData.model_validate(_require_user(self._session, user_id))
 
     def update_settings(
-        self, user_id: UUID, *, city: str, job_role: JobRole
+        self, user_id: UUID, *, job_role: JobRole, city: str | None = None
     ) -> UserData:
-        """блокирует пользователя, меняет город и должность, возвращает обновлённые данные"""
+        """сохраняет должность и меняет город только при его передаче"""
         user = _require_user(self._session, user_id, lock=True)
-        user.city, user.job_role = city, job_role
+        user.job_role = job_role
+        if city is not None:
+            user.city = city
         self._session.flush()
         return UserData.model_validate(user)
 

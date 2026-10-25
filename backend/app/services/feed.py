@@ -83,7 +83,10 @@ class FeedService:
             if set(profile.tag_weights) - known_tags:
                 raise ValueError("Profile policy contains unknown or inactive tags")
             candidates = db.news.list_candidates(
-                since=now - timedelta(days=days), as_of=now, limit=candidate_limit
+                since=now - timedelta(days=days),
+                as_of=now,
+                limit=candidate_limit,
+                include_demo=inputs.company.profile_json.get("synthetic") is True,
             )
 
         request = RankingRequest(profile=profile, candidates=candidates, now=now)

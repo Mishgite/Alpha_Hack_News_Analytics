@@ -925,5 +925,12 @@ ALTER TABLE ONLY public.user_tags
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT fk_users_company_id_companies FOREIGN KEY (company_id) REFERENCES public.companies(id);
 
+CREATE TABLE public.processing_states (
+    key text NOT NULL,
+    value jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT pk_processing_states PRIMARY KEY (key)
+);
+
 
 

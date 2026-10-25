@@ -1,0 +1,53 @@
+services:
+  database:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-alfa_news}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docker/.env}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  init-db:
+    image: alpha-news-backend:local
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+    command: ["python", "-m", "app.infrastructure.database.init_db"]
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  parser:
+    image: alpha-news-backend:local
+    profiles: ["ingest"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+    command: ["python", "-m", "app.newspaper_parser.newspaper_parser"]
+    volumes:
+      - ../backend/app/newspaper_parser/data:/workspace/backend/app/newspaper_parser/data
+    depends_on:
+      database:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:

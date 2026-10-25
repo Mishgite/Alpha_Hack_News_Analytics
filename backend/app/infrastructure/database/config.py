@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     database_url: SecretStr
     db_pool_size: int = 5
     db_max_overflow: int = 5
+    db_pool_timeout: int = Field(default=10, ge=1, le=120)
+    db_statement_timeout_ms: int = Field(default=30000, ge=1000, le=300000)
+    db_lock_timeout_ms: int = Field(default=5000, ge=100, le=60000)
 
     @field_validator("database_url")
     @classmethod

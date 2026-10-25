@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
 
 @dataclass
@@ -16,9 +16,9 @@ class NewsItem:
     text: str = ""
     url: str = ""
     published_at: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     language: str = "und"
-    raw: Optional[Dict[str, Any]] = None
+    raw: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         # Do not label every article Russian just because a source omitted language.
@@ -29,10 +29,23 @@ class NewsItem:
 
             self.language = detect_language(self.text or self.title, fallback="und")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.pop("raw", None)
         return d
+
+    def to_incoming_news(self):
+        """преобразует результат парсера в схему сервиса, проверяет дату и ссылку"""
+        from app.schemas.services import IncomingNews
+
+        return IncomingNews(
+            source=self.source,
+            title=self.title,
+            body=self.text,
+            url=self.url or None,
+            published_at=self.published_at,
+            language=self.language or "und",
+        )
 
 
 @dataclass
@@ -41,19 +54,19 @@ class MarketQuote:
 
     ticker: str
     name: str = ""
-    price: Optional[float] = None
-    change: Optional[float] = None
-    change_percent: Optional[float] = None
-    volume: Optional[float] = None
+    price: float | None = None
+    change: float | None = None
+    change_percent: float | None = None
+    volume: float | None = None
     updated_at: str = ""
     source: str = "moex"
-    raw: Optional[Dict[str, Any]] = None
+    raw: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d.pop("raw", None)
         return d
 
 
 def now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

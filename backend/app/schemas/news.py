@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -26,13 +27,23 @@ class NewsTag(BaseModel):
 class Geography(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    country_code: str | None = None
+    country_code: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
     region_codes: list[str] = Field(default_factory=list)
+    city_codes: list[str] = Field(default_factory=list)
     # значение None означает неизвестный масштаб, False указывает, что событие не общенациональное
     nationwide: bool | None = None
 
 
-class NewsFeatures(BaseModel):
+class BusinessContext(BaseModel):
+    """описывает масштаб события и его деловую значимость до сопоставления с компанией"""
+
+    business_scope: Literal[
+        "general", "industry", "local", "organization", "unknown"
+    ] = "unknown"
+    business_relevance: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+
+
+class NewsFeatures(BusinessContext):
     """признаки одной версии новости; используются одинаково формулой и kNN"""
 
     model_config = ConfigDict(extra="forbid")

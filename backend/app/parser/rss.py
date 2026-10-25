@@ -2,50 +2,45 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import feedparser
 import httpx
 
+from .article import enrich_news_items
 from .models import NewsItem
 from .normalize import normalize_date, strip_html
-from .article import enrich_news_items
 
 
 def fetch_rss_feed(
     url: str,
     source: str,
-    tags: Optional[List[str]] = None,
+    tags: list[str] | None = None,
     timeout: float = 20.0,
     fetch_full_text: bool = True,
-) -> List[NewsItem]:
+) -> list[NewsItem]:
     """Fetch and normalize a generic RSS/Atom feed into a list of NewsItem."""
     tags = tags or []
-    try:
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-            resp = client.get(url)
-            resp.raise_for_status()
-            content = resp.text
-    except Exception:
-        feed = feedparser.parse(url)
-        content = None
-        parsed = feed
-    else:
-        parsed = feedparser.parse(content)
+    with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+        resp = client.get(url)
+        resp.raise_for_status()
+        parsed = feedparser.parse(resp.content)
 
-    items: List[NewsItem] = []
+    items: list[NewsItem] = []
     for entry in getattr(parsed, "entries", []) or []:
         if isinstance(entry, dict):
+            # полный текст RSS имеет приоритет перед анонсом, HTML очищается перед сохранением
+            bodies = [
+                part.get("value", "")
+                for part in entry.get("content", [])
+                if isinstance(part, dict) and isinstance(part.get("value"), str)
+            ]
             _text = (
-                entry.get("summary")
+                max(bodies, key=len, default="")
+                or entry.get("summary")
                 or entry.get("description")
                 or ""
             )
-            if not _text and entry.get("content"):
-                try:
-                    _text = entry["content"][0].get("value", "")
-                except Exception:
-                    _text = ""
             _title = entry.get("title", "")
             _url = entry.get("link", "")
             _published = entry.get("published", entry.get("updated", ""))
@@ -69,34 +64,47 @@ def fetch_rss_feed(
     return enrich_news_items(items) if fetch_full_text else items
 
 
-def fetch_cbr_news(*, fetch_full_text: bool = True) -> List[NewsItem]:
+def fetch_cbr_news(*, fetch_full_text: bool = True) -> list[NewsItem]:
     """Bank of Russia RSS (official)."""
-    return fetch_rss_feed("https://www.cbr.ru/rss/RssPress", source="cbr", tags=["macro", "regulation"], fetch_full_text=fetch_full_text)
+    return fetch_rss_feed(
+        "https://www.cbr.ru/rss/RssPress",
+        source="cbr",
+        tags=["macro", "regulation"],
+        fetch_full_text=fetch_full_text,
+    )
 
 
-def fetch_vedomosti_rss(url: str, category: str = "all", *, fetch_full_text: bool = True) -> List[NewsItem]:
+def fetch_vedomosti_rss(
+    url: str, category: str = "all", *, fetch_full_text: bool = True
+) -> list[NewsItem]:
     """Vedomosti RSS (category URLs from the official RSS catalog)."""
-    return fetch_rss_feed(url, source="vedomosti", tags=[category], fetch_full_text=fetch_full_text)
+    return fetch_rss_feed(
+        url, source="vedomosti", tags=[category], fetch_full_text=fetch_full_text
+    )
 
 
-def fetch_tass_rss(url: str, *, fetch_full_text: bool = True) -> List[NewsItem]:
+def fetch_tass_rss(url: str, *, fetch_full_text: bool = True) -> list[NewsItem]:
     """TASS public RSS."""
     return fetch_rss_feed(url, source="tass", fetch_full_text=fetch_full_text)
 
 
-def fetch_google_news_rss(query: str, lang: str = "ru", country: str = "RU", *, fetch_full_text: bool = True) -> List[NewsItem]:
+def fetch_google_news_rss(
+    query: str, lang: str = "ru", country: str = "RU", *, fetch_full_text: bool = True
+) -> list[NewsItem]:
     """Google News RSS search by keyword."""
     url = (
         f"https://news.google.com/rss/search?q={query.replace(' ', '+')}"
         f"&hl={lang}&gl={country}&ceid={country}:{lang}"
     )
-    return fetch_rss_feed(url, source="google_news", tags=[query], fetch_full_text=fetch_full_text)
+    return fetch_rss_feed(
+        url, source="google_news", tags=[query], fetch_full_text=fetch_full_text
+    )
 
 
 CBR_FX_URL = "https://www.cbr.ru/scripts/XML_daily.asp"
 
 
-def fetch_cbr_fx_rates() -> List[Dict[str, Any]]:
+def fetch_cbr_fx_rates() -> list[dict[str, Any]]:
     """Official CBR FX rates as a list of dicts (variable result)."""
     import xml.etree.ElementTree as ET
 
@@ -105,7 +113,7 @@ def fetch_cbr_fx_rates() -> List[Dict[str, Any]]:
         resp.raise_for_status()
         root = ET.fromstring(resp.text)
 
-    result: List[Dict[str, Any]] = []
+    result: list[dict[str, Any]] = []
     for valute in root.findall("Valute"):
         result.append(
             {
@@ -114,7 +122,9 @@ def fetch_cbr_fx_rates() -> List[Dict[str, Any]]:
                 "nominal": int(valute.findtext("Nominal", default="1")),
                 "name": valute.findtext("Name", default=""),
                 "value": float(valute.findtext("Value", default="0").replace(",", ".")),
-                "vunit_rate": float(valute.findtext("VunitRate", default="0").replace(",", ".")),
+                "vunit_rate": float(
+                    valute.findtext("VunitRate", default="0").replace(",", ".")
+                ),
             }
         )
     return result

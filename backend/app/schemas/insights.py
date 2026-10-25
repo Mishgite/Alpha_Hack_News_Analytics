@@ -1,4 +1,5 @@
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -21,6 +22,8 @@ class SourceReference(BaseModel):
     url: str | None = None
     page: int | None = Field(default=None, ge=1)
     excerpt: str | None = None
+    kind: Literal["news", "bank_report", "company"] | None = None
+    published_on: date | None = None
 
 
 class EvidenceStatement(BaseModel):
@@ -31,6 +34,7 @@ class EvidenceStatement(BaseModel):
     source_refs: list[ReferenceId] = Field(min_length=1)
     company_feature_refs: list[ReferenceId] = Field(default_factory=list)
     condition: str | None = None
+    evidence_quotes: dict[str, str] = Field(default_factory=dict)
 
 
 class InsightResult(BaseModel):

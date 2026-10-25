@@ -115,14 +115,66 @@ class FeedbackRepository:
         news_id: UUID,
         occurred_at: datetime,
     ) -> InteractionData:
-        """записывает показ из доступной ленты или возвращает прежнее событие по event_id
+        """сохраняет один показ новости на снимок ленты"""
+        return self._record_interaction(
+            event_id=event_id,
+            user_id=user_id,
+            snapshot_id=snapshot_id,
+            news_id=news_id,
+            occurred_at=occurred_at,
+            event_type="impression",
+        )
 
-        повторный ID для другого пользователя, снимка или новости вызывает ValueError
-        """
+    def record_open(self, *, event_id, user_id, snapshot_id, news_id, occurred_at):
+        """сохраняет первое открытие новости из конкретного снимка"""
+        return self._record_interaction(
+            event_id=event_id,
+            user_id=user_id,
+            snapshot_id=snapshot_id,
+            news_id=news_id,
+            occurred_at=occurred_at,
+            event_type="open",
+        )
+
+    def _record_interaction(
+        self,
+        *,
+        event_id,
+        user_id,
+        snapshot_id,
+        news_id,
+        occurred_at,
+        event_type,
+    ):
+        """проверяет источник события и убирает повторы, включая новые ID после перезагрузки"""
         if occurred_at.tzinfo is None:
             raise ValueError("occurred_at must include timezone")
         user = _require_user(self._session, user_id, lock=True)
         self._validate_snapshot(user_id, snapshot_id, news_id)
+        event = self._session.get(InteractionEvent, event_id)
+        identity = (user_id, snapshot_id, news_id, event_type)
+        if event is not None:
+            if (
+                event.user_id,
+                event.snapshot_id,
+                event.news_id,
+                event.event_type,
+            ) != identity:
+                raise ValueError("event_id already used for a different interaction")
+            return InteractionData.model_validate(event)
+        existing = self._session.scalar(
+            select(InteractionEvent)
+            .where(
+                InteractionEvent.user_id == user_id,
+                InteractionEvent.snapshot_id == snapshot_id,
+                InteractionEvent.news_id == news_id,
+                InteractionEvent.event_type == event_type,
+            )
+            .order_by(InteractionEvent.received_at, InteractionEvent.event_id)
+            .limit(1)
+        )
+        if existing is not None:
+            return InteractionData.model_validate(existing)
         self._session.execute(
             insert(InteractionEvent)
             .values(
@@ -131,7 +183,7 @@ class FeedbackRepository:
                 company_id=user.company_id,
                 snapshot_id=snapshot_id,
                 news_id=news_id,
-                event_type="impression",
+                event_type=event_type,
                 payload_json={},
                 occurred_at=occurred_at,
             )
@@ -143,7 +195,54 @@ class FeedbackRepository:
             user_id,
             snapshot_id,
             news_id,
-            "impression",
+            event_type,
         ):
             raise ValueError("event_id already used for a different interaction")
         return InteractionData.model_validate(event)
+
+    def report_tags(
+        self, user_id, news_id, snapshot_id, wrong_tag_ids, suggested_tag_ids
+    ):
+        """проверяет показ и допустимые темы, повтор одинаковой жалобы не создаёт запись"""
+        from app.infrastructure.database.models.news import NewsTag, TagFeedback
+        from app.infrastructure.database.models.profiles import Tag
+
+        _require_user(self._session, user_id, lock=True)
+        self._validate_snapshot(user_id, snapshot_id, news_id)
+        wrong, suggested = sorted(set(wrong_tag_ids)), sorted(set(suggested_tag_ids))
+        actual = set(
+            self._session.scalars(
+                select(NewsTag.tag_id).where(NewsTag.news_id == news_id)
+            )
+        )
+        known = set(
+            self._session.scalars(
+                select(Tag.id).where(Tag.id.in_(suggested), Tag.active)
+            )
+        )
+        if (
+            (not wrong and not suggested)
+            or set(wrong) - actual
+            or set(suggested) - known
+            or set(wrong) & set(suggested)
+        ):
+            raise ValueError("Invalid tag feedback")
+        existing = self._session.scalar(
+            select(TagFeedback).where(
+                TagFeedback.user_id == user_id,
+                TagFeedback.news_id == news_id,
+                TagFeedback.wrong_tag_ids == wrong,
+                TagFeedback.suggested_tag_ids == suggested,
+            )
+        )
+        if existing:
+            return {"id": existing.id}
+        row = TagFeedback(
+            user_id=user_id,
+            news_id=news_id,
+            wrong_tag_ids=wrong,
+            suggested_tag_ids=suggested,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return {"id": row.id}

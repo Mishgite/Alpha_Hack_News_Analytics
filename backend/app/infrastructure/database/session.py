@@ -16,7 +16,15 @@ def create_db_engine(settings: Settings) -> Engine:
         pool_pre_ping=True,
         pool_size=settings.db_pool_size,
         max_overflow=settings.db_max_overflow,
-        connect_args={"connect_timeout": 5, "options": "-c timezone=UTC"},
+        pool_timeout=settings.db_pool_timeout,
+        connect_args={
+            "connect_timeout": 5,
+            "options": (
+                "-c timezone=UTC "
+                f"-c statement_timeout={settings.db_statement_timeout_ms} "
+                f"-c lock_timeout={settings.db_lock_timeout_ms}"
+            ),
+        },
         hide_parameters=True,
     )
 

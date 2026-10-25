@@ -1,23 +1,32 @@
-"""GLM company/employee profile tagging."""
-from ._common import load_catalog, model_tags, object_input
+"""предлагает темы по подтверждённым данным компании или сотрудника"""
+
+from app.schemas.tagging import ProfileForTagging, ProfileTags
+from app.services.tag_catalog import load_catalog
+
+from ._common import model_object, validate_features
 
 
 class ProfileTagger:
+    """возвращает темы профиля без изменения прав доступа и личных предпочтений"""
+
     def __init__(self, *, catalog_path=None, transport=None):
+        """сохраняет справочник и транспорт модели"""
         self.catalog = load_catalog(catalog_path)
         self.transport = transport
 
-    def tag(self, data):
-        """Input/output: city, text; output additionally contains catalogue tag codes."""
-        profile = object_input(data, {'city': 200, 'text': 30000})
-        tags = model_tags('LLM_MODEL_CONTEXT',
-            'Определи интересы компании или сотрудника из описания деятельности и должности. '
-            'Выбери город и его регион из справочника, а также обоснованные отраслевые и '
-            'деловые теги. При неоднозначном или неизвестном городе не угадывай географию. '
-            'Поле city задаёт местонахождение клиента; упомянутый в тексте город поставщика '
-            'или заказчика сам по себе не означает регион работы клиента. '
-            'Для сотрудника учти указанную должность и деятельность компании; '
-            'не добавляй всем сотрудникам одинаковые темы управления, налогов и найма. '
-            'Не делай выводов о деятельности только из названия компании.',
-            {'profile': profile}, self.catalog, self.transport)
-        return {**profile, 'tags': tags}
+    def tag(self, profile: ProfileForTagging) -> ProfileTags:
+        """выделяет интересы из деятельности и должности, не угадывает отсутствующие факты"""
+        if not isinstance(profile, ProfileForTagging):
+            raise TypeError("Expected ProfileForTagging")
+        result = model_object(
+            "LLM_MODEL_CONTEXT",
+            "Выдели темы по описанию деятельности и должности. Не выводи отрасль из названия "
+            "компании. city обозначает местонахождение, не весь регион деятельности. "
+            "Не присваивай всем должностям одинаковые темы управления и налогов. "
+            "При недостатке данных верни пустые темы и неизвестную географию.",
+            {"profile": profile.model_dump()},
+            self.catalog,
+            ProfileTags,
+            self.transport,
+        )
+        return validate_features(result, self.catalog)

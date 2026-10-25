@@ -15,6 +15,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.infrastructure.database import models  # noqa: F401
 from app.infrastructure.database.base import Base
 from app.infrastructure.database.session import get_engine
+from app.infrastructure.database.uow import UnitOfWork
+from app.services.news import NewsService
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
@@ -42,11 +44,15 @@ def check_database(connection: Connection) -> int:
 def initialize_database(engine: Engine) -> bool:
     """создаёт схему в пустой базе одной транзакцией, возвращает True при создании
 
-    если таблицы уже есть, только проверяет их наличие и триггер
+    если таблицы уже есть, добавляет служебную таблицу состояний и проверяет схему
     при неполной схеме вызывает ValueError, существующие записи не меняет
     """
     with engine.begin() as connection:
         if inspect(connection).get_table_names(schema="public"):
+            # новые служебные таблицы добавляются без изменения существующих записей
+            from app.infrastructure.database.models.runtime import ProcessingState
+
+            ProcessingState.__table__.create(connection, checkfirst=True)
             check_database(connection)
             return False
 
@@ -60,6 +66,9 @@ def initialize_database(engine: Engine) -> bool:
             text("SELECT pg_catalog.set_config('search_path', :path, false)"),
             {"path": search_path},
         )
+        from app.infrastructure.database.models.runtime import ProcessingState
+
+        ProcessingState.__table__.create(connection, checkfirst=True)
         check_database(connection)
     return True
 
@@ -77,6 +86,12 @@ def main() -> int:
         if not args.check:
             created = initialize_database(engine)
             print("Schema created" if created else "Schema already exists")
+
+            def unit_of_work():
+                return UnitOfWork(engine)
+
+            count = NewsService(uow_factory=unit_of_work).sync_tag_catalog()
+            print("Business tags synchronized:", count)
         with engine.connect() as connection:
             count = check_database(connection)
             print("Database:", connection.scalar(text("SELECT current_database()")))
