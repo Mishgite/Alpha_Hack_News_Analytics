@@ -51,6 +51,12 @@
 * {
   box-sizing: border-box;
 }
+html {
+  scrollbar-gutter: stable;
+}
+html:has(dialog[open]) {
+  overflow: hidden;
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -925,6 +931,7 @@ form .form-error {
   font-size: 13px;
 }
 .drawer {
+  overscroll-behavior: contain;
   position: fixed;
   inset: 0;
   margin: auto;

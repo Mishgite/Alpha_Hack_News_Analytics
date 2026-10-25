@@ -76,6 +76,7 @@ let generation = 0,
   toastTimer,
   opener,
   closeTimer;
+let panelRetry;
 let profileChange = null;
 async function changeProfile(operation) {
   if (profileChange) throw new UserError("Дождитесь сохранения профиля");
@@ -107,25 +108,18 @@ function theme() {
   });
 }
 async function connection() {
-  panel(
-    "Состояние сервисов",
-    '<p role="status">Проверяем доступность…</p>',
-  );
-  const target = $("#panel-body");
-  try {
+  const result = await loadPanel("Состояние сервисов", async () => {
     await api.request("GET", "/health");
     const status = api.hasSession()
       ? await api.request("GET", "/api/status")
       : null;
-    if (!dialog.open || $("#panel-title").textContent !== "Состояние сервисов")
-      return;
-    target.innerHTML = status
+    return { status };
+  }, connection);
+  if (!result) return;
+  const { status } = result;
+  panel("Состояние сервисов", status
       ? `<dl class="facts-list"><div><dt>Данные приложения</dt><dd>${status.database === "ready" ? "Доступны" : "Временно недоступны"}</dd></div><div><dt>Обновление новостей</dt><dd>${status.worker_alive ? "Работает" : "Временно приостановлено"}</dd></div><div><dt>Разбор событий</dt><dd>${status.analysis_available ? "Доступен" : "Временно недоступен"}</dd></div></dl>`
-      : "<p>Приложение доступно. Для проверки остальных функций войдите в профиль</p>";
-  } catch (error) {
-    if (dialog.open && $("#panel-title").textContent === "Состояние сервисов")
-      target.innerHTML = failure(error, "connection");
-  }
+      : "<p>Приложение доступно. Для проверки остальных функций войдите в профиль</p>");
 }
 function toast(text) {
   $("#toast").textContent = text;
@@ -134,6 +128,7 @@ function toast(text) {
   toastTimer = setTimeout(() => $("#toast").classList.remove("visible"), 4500);
 }
 function panel(title, body) {
+  panelRetry = null;
   clearTimeout(closeTimer);
   dialog.classList.remove("closing");
   dialog.classList.remove("demo-dialog", "reason-dialog");
@@ -146,6 +141,7 @@ function panel(title, body) {
   dialog.scrollTop = 0;
 }
 function closePanel() {
+  panelRetry = null;
   if (!dialog.open) return;
   dialog.classList.add("closing");
   clearTimeout(closeTimer);
@@ -158,6 +154,22 @@ function closePanel() {
     },
     reduced() ? 0 : 150,
   );
+}
+async function loadPanel(title, request, retry) {
+  const version = generation;
+  panel(title, '<div class="loading-label" role="status"><span class="spinner"></span>Загружаем…</div>');
+  const marker = $("#panel-body").firstElementChild;
+  const current = () => version === generation && marker.isConnected && dialog.open && !dialog.classList.contains("closing");
+  try {
+    const result = await request();
+    return current() ? result : null;
+  } catch (error) {
+    if (current()) {
+      panel(title, failure(error, "retry-panel"));
+      panelRetry = retry;
+    }
+    return null;
+  }
 }
 function failure(e, retry = "retry", title = "Не получилось загрузить данные") {
   const expired = e.status === 401;
@@ -431,12 +443,11 @@ function reason(id) {
   dialog.classList.add("reason-dialog");
 }
 async function article(id) {
-  const token = generation;
   const snapshot = state.feed?.items.some((item) => item.ranking.news_id === id)
     ? state.feed.snapshot_id
     : null;
-  const a = await api.request("GET", "/api/news/" + id);
-  if (token !== generation) return;
+  const a = await loadPanel("Новость", () => api.request("GET", "/api/news/" + id), () => article(id));
+  if (!a) return;
   panel(
     a.title,
     `<div class="news-meta">${esc(sourceName(a.source_url))} · ${date(a.published_at)}</div><div class="tags">${(a.features?.tags || []).map((t) => tag(t.id)).join("")}</div><p class="article-text">${esc(a.text)}</p>${safeUrl(a.source_url) ? `<a class="button secondary" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(a.source_url))}">Открыть первоисточник ${icon("external")}</a>` : `<div class="notice">Ссылка на первоисточник отсутствует</div>`}<button class="button primary" data-action="analyse" data-id="${esc(id)}">${icon("spark")}Разобрать влияние на компанию</button>`,
@@ -561,14 +572,13 @@ function statements(items) {
     : '<p class="muted">Недостаточно подтверждённых данных</p>';
 }
 async function statementFeatures(index) {
-  const version = generation;
   const statement = analysisStatements(state.analysis.result)[Number(index)];
   if (!statement) return;
-  const context = await api.request(
+  const context = await loadPanel("Данные для вывода", () => api.request(
     "GET",
     `/api/analyses/${state.analysis.id}/context`,
-  );
-  if (version !== generation) return;
+  ), () => statementFeatures(index));
+  if (!context) return;
   const labels = {
     okved_code: "Код ОКВЭД",
     okved_name: "Деятельность",
@@ -666,25 +676,30 @@ async function source(ref, statementIndex) {
       .flatMap((message) => message.sources_json || [])
       .find((source) => source && source.id === ref);
   if (!s) return;
-  let documentLink = "",
-    sourceError = "";
-  if (s.kind === "bank_report" && s.id.startsWith("report:")) {
-    const chunkId = s.id.slice(7);
-    try {
-      await api.request("GET", "/api/report-chunks/" + chunkId);
-      if (!documentUrls.has(chunkId)) {
-        const file = await api.request(
-          "GET",
-          "/api/report-chunks/" + chunkId + "/document",
-        );
-        documentUrls.set(chunkId, URL.createObjectURL(file));
+  const loaded = await loadPanel(s.title, async () => {
+    let documentLink = "",
+      sourceError = "";
+    if (s.kind === "bank_report" && s.id.startsWith("report:")) {
+      const chunkId = s.id.slice(7);
+      try {
+        await api.request("GET", "/api/report-chunks/" + chunkId);
+        if (!documentUrls.has(chunkId)) {
+          const file = await api.request(
+            "GET",
+            "/api/report-chunks/" + chunkId + "/document",
+          );
+          if (token !== generation) return null;
+          documentUrls.set(chunkId, URL.createObjectURL(file));
+        }
+        documentLink = `<a class="button primary" href="${documentUrls.get(chunkId)}#page=${s.page || 1}" target="_blank" rel="noopener noreferrer">Открыть PDF · стр. ${s.page || 1} ${icon("external")}</a>`;
+      } catch (error) {
+        sourceError = userMessage(error);
       }
-      documentLink = `<a class="button primary" href="${documentUrls.get(chunkId)}#page=${s.page || 1}" target="_blank" rel="noopener noreferrer">Открыть PDF · стр. ${s.page || 1} ${icon("external")}</a>`;
-    } catch (error) {
-      sourceError = userMessage(error);
     }
-  }
-  if (token !== generation) return;
+    return { documentLink, sourceError };
+  }, () => source(ref, statementIndex));
+  if (!loaded) return;
+  const { documentLink, sourceError } = loaded;
   const external = safeUrl(s.url);
   const quote = statementEvidence(state.analysis.result, statementIndex, ref);
   panel(
@@ -712,12 +727,11 @@ function traceDescription(step) {
   return "Этап завершён";
 }
 async function trace() {
-  const version = generation;
-  const steps = await api.request(
+  const steps = await loadPanel("Как получен разбор", () => api.request(
     "GET",
     `/api/analyses/${esc(state.analysis.id)}/trace`,
-  );
-  if (version !== generation) return;
+  ), trace);
+  if (!steps) return;
   const names = {
     company_context: "Контекст компании",
     plan: "План анализа",
@@ -925,6 +939,7 @@ document.addEventListener("click", async (e) => {
       renderMarketTiles();
     }
     if (action === "connection") await connection();
+    if (action === "retry-panel" && panelRetry) await panelRetry();
     if (action === "apply-scenario" && isDemo) {
       api.setScenario($("#scenario").value);
       closePanel();
@@ -1028,17 +1043,22 @@ document.addEventListener("click", async (e) => {
       documentUrls.forEach((url) => URL.revokeObjectURL(url));
       documentUrls.clear();
       closePanel();
-      location.hash = "login";
+      if (route() === "login") await render();
+      else location.hash = "login";
     }
     if (b.dataset.company) {
+      const role = $('#demo-role-form [name="job_role"]')?.value;
       b.disabled = true;
       state.profile = await changeProfile(() => api.request("PUT", "/api/profile/company", {
         company_id: b.dataset.company,
       }));
       state.feed = null;
-      closePanel();
-      if (route() === "news" || route() === "demo") await render();
-      else location.hash = "news";
+      if (b.isConnected) {
+        closePanel();
+        await render();
+        const roleSelect = $('#demo-role-form [name="job_role"]');
+        if (roleSelect && role) roleSelect.value = role;
+      }
       toast("Компания изменена");
     }
     if (action === "more") {
@@ -1061,9 +1081,11 @@ document.addEventListener("click", async (e) => {
           block: "start",
         });
       } catch (err) {
+        if (version !== generation || !b.isConnected) return;
         b.disabled = false;
+        $(".pagination-error")?.remove();
         const warning = document.createElement("div");
-        warning.className = "notice warning";
+        warning.className = "notice warning pagination-error";
         warning.innerHTML =
           esc(userMessage(err)) +
           ' <button class="text-button" data-action="refresh">Обновить подборку</button>';
@@ -1132,6 +1154,11 @@ document.addEventListener("click", async (e) => {
     if (b.isConnected) b.disabled = false;
   }
 });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.isComposing && e.target.matches('input[type="search"]'))
+    e.preventDefault();
+});
+
 document.addEventListener("input", (e) => {
   if (e.target.id === "market-search") {
     marketLimit = 30;
@@ -1189,14 +1216,18 @@ document.addEventListener("submit", async (e) => {
         job_role: body.get("job_role"),
       }));
       state.feed = null;
+      if (!form.isConnected) return;
       if (route() === "home") await render();
       else location.hash = "home";
     }
     if (form.id === "demo-role-form") {
-      await changeProfile(() => api.request("PUT", "/api/profile/settings", {
-        job_role: body.get("job_role"),
-      }));
-      state.feed = null;
+      if (body.get("job_role") !== state.profile.user.job_role) {
+        await changeProfile(() => api.request("PUT", "/api/profile/settings", {
+          job_role: body.get("job_role"),
+        }));
+        state.feed = null;
+      }
+      if (!form.isConnected) return;
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
@@ -1214,6 +1245,7 @@ document.addEventListener("submit", async (e) => {
         ],
       }));
       state.feed = null;
+      if (!form.isConnected) return;
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
