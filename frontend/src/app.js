@@ -190,7 +190,7 @@ function roleOptions(selected) {
     .join("");
 }
 function demoRoleField(selected) {
-  return `<fieldset class="demo-role-field"><legend>Настройка демонстрации</legend><p>Выбор роли не входит в интерфейс приложения. Здесь он позволяет проверить подборку для разных пользователей.</p><label>Роль в демосценарии<select name="job_role" aria-label="Роль в демосценарии">${roleOptions(selected)}</select></label></fieldset>`;
+  return `<label>Должность<select name="job_role" aria-label="Должность">${roleOptions(selected)}</select></label>`;
 }
 async function demoRole() {
   if (!state.profile && api.hasSession()) {
@@ -201,8 +201,8 @@ async function demoRole() {
     return;
   }
   panel(
-    "Роль для демонстрации",
-    `<p class="demo-boundary">Панель прототипа, не экран банковского приложения</p><form id="demo-role-form">${demoRoleField(state.profile.user.job_role)}<p class="field-hint">В приложении используется роль из профиля пользователя. В демо её можно менять, чтобы сравнить подборки. Сохранённый AI-разбор компании и новости остаётся общим.</p><button class="button demo-apply" type="submit">Применить роль и открыть подборку</button></form>`,
+    "Должность",
+    `<form id="demo-role-form">${demoRoleField(state.profile.user.job_role)}<button class="button demo-apply" type="submit">Применить</button></form>`,
     "Управление демонстрацией",
   );
   dialog.classList.add("demo-dialog");
@@ -1141,7 +1141,7 @@ document.addEventListener("submit", async (e) => {
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
-      toast("Роль демосценария изменена. Подборка обновлена");
+      toast("Должность сохранена");
     }
     if (form.id === "interests-form") {
       const included = body.getAll("company-topic"),
