@@ -176,12 +176,12 @@ function inlineError(form, e) {
 function skeleton() {
   return `<div class="loading-block" aria-busy="true"><div class="loading-label" role="status"><span class="spinner"></span>Загружаем…</div>${[0, 1, 2].map(() => '<div class="skeleton-card"><span class="skeleton short"></span><span class="skeleton long"></span><span class="skeleton"></span><span class="skeleton medium"></span></div>').join("")}</div>`;
 }
-function heading(title, subtitle) {
-  return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div></div>`;
+function heading(title) {
+  return `<div class="page-heading"><h1>${title}</h1></div>`;
 }
 async function home() {
   const token = generation;
-  main.innerHTML = heading("Главная", "Сервисы для вашего бизнеса") + `
+  main.innerHTML = heading("Главная") + `
     <section class="bank-overview" aria-label="Банковские сервисы">
       <div class="bank-preview"><span class="overview-icon">${icon("wallet")}</span><div><h2>Счета</h2><p>Остатки и реквизиты</p></div></div>
       <div class="bank-preview"><span class="overview-icon">${icon("card")}</span><div><h2>Платежи</h2><p>Переводы и история операций</p></div></div>
@@ -189,10 +189,10 @@ async function home() {
     </section>
     <div class="overview-grid">
       <section class="insights-widget" aria-labelledby="widget-title">
-        <header class="widget-heading"><div><span class="widget-label">Для вашего бизнеса</span><h2 id="widget-title">Бизнес-инсайты</h2><p>Новости и их влияние на компанию</p></div><a class="button primary" href="#news">Открыть ${icon("arrow")}</a></header>
+        <header class="widget-heading"><div><h2 id="widget-title">Бизнес-инсайты</h2><p>Новости и их влияние на компанию</p></div><a class="button primary" href="#news">Открыть ${icon("arrow")}</a></header>
         <div id="overview-news" aria-live="polite"><p class="widget-status"><span class="spinner"></span>Подбираем новости…</p></div>
       </section>
-      <a class="market-shortcut" href="#market"><span class="overview-icon">${icon("chart")}</span><h2>Биржевой обзор</h2><p>Котировки и изменения на рынке</p><span class="market-shortcut-link">Смотреть обзор ${icon("arrow")}</span></a>
+      <a class="market-shortcut" href="#market"><span class="overview-icon">${icon("chart")}</span><h2>Биржевой обзор</h2><span class="market-shortcut-link" aria-hidden="true">${icon("arrow")}</span></a>
     </div>`;
   try {
     if (!state.feed || state.feedDays !== 7 || Date.parse(state.feed.expires_at) <= Date.now()) {
@@ -237,7 +237,6 @@ async function login() {
   main.innerHTML = `<div class="onboarding">
     <div class="onboarding-tools">${api.hasSession() ? '<a class="back-link" href="#news">← К подборке</a>' : ""}<button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div>
     <div class="onboarding-intro">
-      <span class="eyebrow">Демовход</span>
       <h1>Настройка профиля</h1>
     </div>
     <form id="login-form" class="form-card">
@@ -268,18 +267,15 @@ function feedBody() {
   const f = state.feed;
   if (!f) return;
   $("#feed-results").innerHTML = f.items.length
-    ? `<div class="feed-list">${f.items.map(feedCard).join("")}</div><div class="pagination">${f.has_more ? '<button class="button secondary" data-action="more">Показать ещё 20 ' + icon("plus") + "</button>" : "<span>Конец подборки</span>"}<span>Показано ${f.items.length}</span></div>`
-    : `<div class="empty-state">${icon("document")}<h2>${state.days === null ? "Подходящих новостей пока нет" : "За этот период новостей нет"}</h2><p>${state.days !== null ? "Сбросьте фильтр, чтобы вернуться к обычной подборке" : "Можно посмотреть более ранние публикации"}</p>${state.days !== null ? '<button class="button secondary" data-action="reset-feed-filter">Сбросить фильтр</button>' : '<button class="button secondary" data-action="expand-period">Более ранние новости</button>'}</div>`;
+    ? `<div class="feed-list">${f.items.map(feedCard).join("")}</div>${f.has_more ? '<div class="pagination"><button class="button secondary" data-action="more">Показать ещё ' + icon("plus") + "</button></div>" : ""}`
+    : `<div class="empty-state">${icon("document")}<h2>${state.days === null ? "Подходящих новостей пока нет" : "За этот период новостей нет"}</h2>${state.days !== null ? '<button class="button secondary" data-action="reset-feed-filter">Сбросить фильтр</button>' : '<button class="button secondary" data-action="expand-period">Более ранние новости</button>'}</div>`;
   observeImpressions();
 }
 async function feed(reuse = false) {
   main.innerHTML =
-    heading(
-      "Бизнес-инсайты",
-      "Новости, которые стоит проверить в контексте вашей компании",
-    ) +
+    heading("Бизнес-инсайты") +
     feedPreferences() +
-    `<div class="feed-toolbar"><div><h2>Новости для вас</h2></div><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>
+    `<div class="feed-toolbar feed-controls"><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>
     <form id="feed-filters" class="feed-filters" hidden><fieldset><legend>Дата публикации</legend><div class="date-options">${[[0, "По умолчанию"], [1, "За сутки"], [7, "За неделю"], [30, "За месяц"]].map(([value, label]) => `<label><input type="radio" name="days" value="${value}" ${(state.days ?? 0) === value ? "checked" : ""}><span>${label}</span></label>`).join("")}</div></fieldset><div class="filter-actions"><button class="button primary" type="submit">Применить</button><button class="text-button" type="button" data-action="reset-feed-filter">Сбросить</button></div></form>
     ${state.days !== null ? `<div class="active-filters"><button class="filter-chip" data-action="reset-feed-filter" aria-label="Убрать фильтр по дате">${{1: "За сутки", 7: "За неделю", 30: "За месяц"}[state.days]} ${icon("close")}</button></div>` : ""}<div id="feed-results">${skeleton()}</div>`;
   const token = generation;
@@ -404,8 +400,8 @@ function feedPreferences() {
   const selected = new Set(p.personal_tag_ids);
   const option = (t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${selected.has(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`;
   return `<details class="feed-preferences" id="feed-preferences"><summary>${icon("sliders")}<span>Настроить подборку</span>${icon("chevron")}</summary><form id="interests-form"><div class="preference-columns">
-    <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">Определены по деятельности компании. Ненужные темы можно отключить.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены. Можно добавить свои ниже.</p>'}</div></section>
-    <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Дополнительные темы не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
+    <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">По деятельности компании</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены</p>'}</div></section>
+    <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
     </div><p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="preference-actions"><button class="button primary" type="submit">Сохранить</button><button class="button ghost" type="button" data-action="cancel-preferences">Отмена</button></div></form></details>`;
 }
 function companyInfo() {
@@ -423,7 +419,7 @@ function reason(id) {
   const r = item.ranking;
   const hasGeography = ["formula-v2-geography", "formula-v3-business-context"].includes(r.ranking_version);
   const topics = r.matched_signals.length
-    ? `<p>Эти темы совпали с вашими настройками и повысили позицию новости:</p><div class="tags">${r.matched_signals.map(tag).join("")}</div>`
+    ? `<div class="tags">${r.matched_signals.map(tag).join("")}</div>`
     : "<p>Совпадений с вашими темами нет. Новость попала в подборку за счёт свежести.</p>";
   const geography = hasGeography
     ? `<section><h3>Регион</h3><p>${(r.geography_factor ?? 1) < 1 ? "Событие относится к другому региону. Поэтому его приоритет ниже." : r.geography_bonus > 0 ? esc(r.geography_reason) + ". Это повысило позицию новости." : r.geography_score == null ? "География не уточнена и не влияет на порядок." : r.geography_score > 0 ? "Регион совпал, но совпадений по темам нет. Поэтому география не повысила позицию новости." : "География новости не совпала с данными компании. Дополнительный приоритет за регион не добавлен."}</p></section>`
@@ -484,7 +480,7 @@ async function analyse(id) {
     state.article = a;
     analysisFrame(
       a,
-      `<section class="analysis-loading"><div class="analysis-orb">${icon("spark")}</div><h2 id="job-label">Загружаем разбор</h2><p>Оцениваем влияние новости на ваш бизнес</p><div class="job-progress"><i></i></div><a class="text-button" href="#news">Вернуться к ленте</a></section>`,
+      `<section class="analysis-loading"><div class="analysis-orb">${icon("spark")}</div><h2 id="job-label">Загружаем разбор</h2><div class="job-progress"><i></i></div><a class="text-button" href="#news">Вернуться к ленте</a></section>`,
     );
     const revision = await analysisRevision(state.profile.company, a);
     if (version !== generation) return;
@@ -729,7 +725,7 @@ async function trace() {
   };
   panel(
     "Как получен разбор",
-    `<p class="muted">${isDemo ? "Учебный пример разбора" : "Этапы подготовки разбора"}</p><ol class="trace-list">${steps.map((s) => `<li><strong>${names[s.step] || "Обработка данных"}</strong><p>${esc(traceDescription(s))}</p></li>`).join("")}</ol>`,
+    `${isDemo ? '<p class="muted">Учебный пример разбора</p>' : ""}<ol class="trace-list">${steps.map((s) => `<li><strong>${names[s.step] || "Обработка данных"}</strong><p>${esc(traceDescription(s))}</p></li>`).join("")}</ol>`,
   );
 }
 const change = (n) =>
@@ -779,10 +775,7 @@ function renderMarketTiles() {
 }
 async function market() {
   main.innerHTML =
-    heading(
-      "Биржевой обзор",
-      "Котировки и изменения цен",
-    ) +
+    heading("Биржевой обзор") +
     '<div id="market-content">' +
     skeleton() +
     "</div>";
@@ -802,7 +795,7 @@ async function market() {
 function scenarios() {
   panel(
     "Сценарии демо",
-    `<p>Учебные примеры работы приложения</p><label>Состояние<select id="scenario" aria-label="Состояние">${[
+    `<label>Состояние<select id="scenario" aria-label="Состояние">${[
       ["normal", "Обычная работа / неполный разбор"],
       ["complete", "Разбор с учебным отчётом"],
       ["conflict", "Отчёт старше события"],
@@ -1203,7 +1196,6 @@ document.addEventListener("submit", async (e) => {
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
-      toast("Должность сохранена");
     }
     if (form.id === "interests-form") {
       const included = body.getAll("company-topic"),

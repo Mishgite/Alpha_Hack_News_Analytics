@@ -2899,3 +2899,5 @@ code {
 .company-picker-heading h2 { font-size: 20px; }
 .company-picker-heading .icon-button { flex-shrink: 0; background: var(--surface-2); }
 .company-picker #company-results { margin-top: 14px; }
+
+.feed-controls { justify-content: flex-end; }
