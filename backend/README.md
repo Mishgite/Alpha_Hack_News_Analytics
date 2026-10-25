@@ -2,7 +2,7 @@
 
 Python 3.12 · PostgreSQL 17
 
-[Запуск фронта, API и воркера кнопкой Run в PyCharm](docs/run.md)
+[Полная настройка и запуск проекта](docs/run.md): окружение, PostgreSQL, данные, модель, фронт, API и воркер
 
 [Фронтенд и его запуск](../frontend/README.md) · [Проверка интеграции и оставшиеся задачи](docs/integration-review.md) · [Сторонние компоненты](THIRD_PARTY_NOTICES.md)
 

@@ -1194,6 +1194,17 @@ form .form-error {
   background: var(--warning-bg);
   border-color: transparent;
 }
+.analysis-limitations details {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.analysis-limitations ul {
+  padding-left: 20px;
+  margin: 12px 0 0;
+}
+.analysis-limitations li + li {
+  margin-top: 8px;
+}
 .notice.success {
   color: var(--positive);
   background: var(--positive-bg);
@@ -1605,6 +1616,7 @@ code {
 }
 .chat-answer p {
   line-height: 1.8;
+  white-space: pre-line;
 }
 .chat-answer .text-button {
   font-size: 11px;

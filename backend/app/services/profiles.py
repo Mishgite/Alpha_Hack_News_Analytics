@@ -117,11 +117,14 @@ class ProfileService:
     ) -> list[CompanyData]:
         """возвращает страницу компаний для выбора, отсортированную по ID"""
         with self._uow() as db:
+            company_ids = demo_company_ids() if demo_selection else None
+            if demo_selection and not db.companies.list(limit=1, company_ids=company_ids):
+                company_ids = ("demo-api-company",)
             return db.companies.list(
                 limit=limit,
                 offset=offset,
                 query=query,
-                company_ids=demo_company_ids() if demo_selection else None,
+                company_ids=company_ids,
             )
 
     def save_company(self, company: CompanyData) -> CompanyData:

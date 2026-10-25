@@ -47,6 +47,7 @@ from app.services.ai_agents.analysis import (
     AnalysisAgent,
     prepare_evidence,
     resolve_statements,
+    validate_public_text,
     validate_statements,
 )
 from app.services.ai_agents.client import JsonClient
@@ -460,6 +461,24 @@ def test_analysis_schema_rejects_unlinked_company_claims_and_unconditional_risks
         with pytest.raises(ValueError):
             AnalysisDraft.model_validate({"facts": [statement], section: [statement]})
     assert AnalysisDraft.model_validate({"facts": [statement]}).why_important == []
+
+
+@pytest.mark.parametrize("field", ["text", "condition", "limitations"])
+def test_analysis_rejects_internal_fields_in_public_text(field):
+    """отклоняет внутренние имена в тексте для пользователя, сохраняя дословность цитат"""
+    statement = SimpleNamespace(
+        text="Позиция банка не подтверждена",
+        condition=None,
+        evidence_quotes={"news:one": "bank_position из текста источника"},
+    )
+    validate_public_text([statement], ["Нет сведений о маршрутах компании"])
+    limitations = []
+    if field == "limitations":
+        limitations = ["bank_position не сформирована"]
+    else:
+        setattr(statement, field, "Проверить CL_PRODUCT_LOA_MARK")
+    with pytest.raises(ValueError, match="служебные имена"):
+        validate_public_text([statement], limitations)
 
 
 def test_followup_receives_saved_company_values():
@@ -938,6 +957,11 @@ def test_demo_company_selection_and_search(services):
     ids = demo_company_ids()
     assert len(ids) == len(set(ids)) == 50
     profile = services["profiles"]
+    create_demo_data(profile, services["news"])
+    assert [company.id for company in profile.list_companies(demo_selection=True)] == [
+        "demo-api-company"
+    ]
+    assert profile.list_companies(demo_selection=True, query="несуществующая") == []
     for index, company_id in enumerate(ids):
         profile.save_company(
             CompanyData(
