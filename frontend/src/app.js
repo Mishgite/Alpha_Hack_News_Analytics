@@ -136,7 +136,7 @@ function toast(text) {
 function panel(title, body) {
   clearTimeout(closeTimer);
   dialog.classList.remove("closing");
-  dialog.classList.remove("demo-dialog", "reason-dialog", "settings-dialog");
+  dialog.classList.remove("demo-dialog", "reason-dialog");
   $("#panel-title").textContent = title;
   $("#panel-body").innerHTML = body;
   if (!dialog.open) {
@@ -220,7 +220,7 @@ function roleOptions(selected) {
     .join("");
 }
 async function demoSetup() {
-  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><span class="eyebrow">Демонстрация</span><h1>Компания и должность</h1></div><form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Применить</button></form><section class="form-card"><h2>Компания</h2><p>${esc(state.profile.company.industry || state.profile.company.id)}</p><p class="field-hint">${[state.profile.company.id, state.profile.company.city].filter(Boolean).map(esc).join(" · ")}</p><button class="text-button" data-action="company-info">О компании ${icon("arrow")}</button><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button></div>`;
+  main.innerHTML = `<div class="onboarding"><div class="onboarding-tools"><a class="back-link" href="#news">← Вернуться в приложение</a><button class="icon-button theme-button" data-action="theme" aria-label="Сменить тему"></button></div><div class="onboarding-intro"><span class="eyebrow">Демонстрация</span><h1>Компания и должность</h1></div><form id="demo-role-form" class="form-card"><label>Должность<select name="job_role">${roleOptions(state.profile.user.job_role)}</select></label><button class="button primary" type="submit">Применить</button></form><section class="form-card"><h2>Компания</h2><p>${esc(state.profile.company.industry || state.profile.company.id)}</p><p class="field-hint">${[state.profile.company.id, state.profile.company.city].filter(Boolean).map(esc).join(" · ")}</p><button class="text-button" data-action="company-info">О компании ${icon("arrow")}</button><label>Найти компанию<input id="company-search" type="search" aria-label="Поиск компании" placeholder="ID, отрасль, ОКВЭД, город или регион"></label><div id="company-results"></div><div id="catalog-status" aria-live="polite"></div></section><button class="text-button" data-action="${isDemo ? "scenarios" : "connection"}">${isDemo ? "Сценарии проверки" : "Состояние сервисов"}</button><button class="text-button danger" data-action="logout">Выйти из демо</button></div>`;
   theme();
   await loadCompanies("");
 }
@@ -275,6 +275,7 @@ async function feed(reuse = false) {
       "Бизнес-инсайты",
       "Новости, которые стоит проверить в контексте вашей компании",
     ) +
+    feedPreferences() +
     `<div class="feed-toolbar"><div><h2>Новости для вас</h2></div><div class="toolbar-actions"><button class="button secondary" data-action="feed-filters" aria-expanded="false" aria-controls="feed-filters">${icon("sliders")}Фильтр${state.days !== null ? '<span class="filter-count">1</span>' : ""}</button><button class="button secondary" data-action="refresh">${icon("refresh")}Обновить</button></div></div>
     <form id="feed-filters" class="feed-filters" hidden><fieldset><legend>Дата публикации</legend><div class="date-options">${[[0, "По умолчанию"], [1, "За сутки"], [7, "За неделю"], [30, "За месяц"]].map(([value, label]) => `<label><input type="radio" name="days" value="${value}" ${(state.days ?? 0) === value ? "checked" : ""}><span>${label}</span></label>`).join("")}</div></fieldset><div class="filter-actions"><button class="button primary" type="submit">Применить</button><button class="text-button" type="button" data-action="reset-feed-filter">Сбросить</button></div></form>
     ${state.days !== null ? `<div class="active-filters"><button class="filter-chip" data-action="reset-feed-filter" aria-label="Убрать фильтр по дате">${{1: "За сутки", 7: "За неделю", 30: "За месяц"}[state.days]} ${icon("close")}</button></div>` : ""}<div id="feed-results">${skeleton()}</div>`;
@@ -393,14 +394,14 @@ function companyResults(items) {
     ? ""
     : "Компании не найдены. Попробуйте другую отрасль, город или ID";
 }
-function interests() {
+function feedPreferences() {
   const p = state.profile;
   const selected = new Set(p.personal_tag_ids);
   const option = (t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${selected.has(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`;
-  main.innerHTML = `<section class="interests-page"><a class="back-link" href="#news">← К подборке</a><header><h1>Темы подборки</h1><p>Какие темы учитывать в ваших новостях</p></header><form id="interests-form">
+  return `<details class="feed-preferences" id="feed-preferences"><summary>${icon("sliders")}<span>Настроить подборку</span>${icon("chevron")}</summary><form id="interests-form"><div class="preference-columns">
     <section class="interest-section"><h2>Темы бизнеса</h2><p class="field-hint">Определены по деятельности компании. Ненужные темы можно отключить.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("") || '<p class="field-hint">Темы ещё не определены. Можно добавить свои ниже.</p>'}</div></section>
     <section class="interest-section"><h2>Личные интересы</h2><div class="personal-options">${state.tags.filter((t) => selected.has(t.id)).map(option).join("") || '<p class="field-hint">Дополнительные темы не выбраны</p>'}</div><details class="interest-catalog"><summary>Добавить темы</summary><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.filter((t) => !selected.has(t.id)).map(option).join("")}</div><p class="field-hint tag-search-empty" hidden>Темы не найдены</p></details></section>
-    <p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="sticky-form-actions"><button class="button primary" type="submit">Сохранить</button><a class="button ghost" href="#news">Отмена</a></div></form></section>`;
+    </div><p class="field-hint">Отключённые темы бизнеса не учитываются, даже если выбраны в личных интересах.</p><div class="preference-actions"><button class="button primary" type="submit">Сохранить</button><button class="button ghost" type="button" data-action="cancel-preferences">Отмена</button></div></form></details>`;
 }
 function companyInfo() {
   const c = state.profile.company;
@@ -410,19 +411,6 @@ function companyInfo() {
     "О компании",
     `<p>${esc(c.id)}</p><dl class="facts-list"><div><dt>Деятельность</dt><dd>${esc(c.okved_name || c.industry || "Нет данных")}${c.okved_code ? `<small>ОКВЭД ${esc(c.okved_code)}</small>` : ""}</dd></div><div><dt>Выручка</dt><dd>${c.revenue == null ? "Нет данных" : money(Number(c.revenue) / 1e9) + " млрд ₽"}</dd></div><div><dt>Регистрация</dt><dd>${esc([...new Set([c.city, c.region].filter(Boolean))].join(", ") || "Нет данных")}</dd></div><div><dt>Кредитные продукты</dt><dd>${hasCredit ? "Есть" : ["0", "0.0", 0, false].includes(credit) ? "Нет" : "Нет данных"}</dd></div><div><dt>Регионы деятельности</dt><dd>${c.operating_region_codes?.length ? esc(c.operating_region_codes.join(", ")) : "Не указаны"}</dd></div>${c.group_id ? `<div><dt>Группа компаний</dt><dd>${esc(c.group_id)}</dd></div>` : ""}</dl><p class="field-hint">Регистрация не означает, что компания работает только в этом регионе</p>`,
   );
-}
-async function settings() {
-  if (!state.profile && api.hasSession())
-    state.profile = await api.request("GET", "/api/profile");
-  if (!state.profile) {
-    location.hash = "login";
-    return;
-  }
-  panel(
-    "Настройки",
-    `<a class="settings-link" href="#interests">${icon("sliders")}Темы подборки ${icon("arrow")}</a><button class="text-button danger" data-action="logout">Выйти</button>`,
-  );
-  dialog.classList.add("settings-dialog");
 }
 function reason(id) {
   const item = state.feed?.items.find((item) => item.ranking.news_id === id);
@@ -837,13 +825,18 @@ async function render() {
   if (dialog.open) dialog.close();
   dialog.classList.remove("closing");
   if (!location.hash) history.replaceState(history.state, "", "#home");
-  const path = route();
+  let path = route();
+  const openPreferences = path === "interests";
+  if (openPreferences) {
+    history.replaceState(history.state, "", "#news");
+    path = "news";
+  }
   const setup = path === "login" || path === "demo" || !api.hasSession();
   document.body.classList.toggle("profile-setup", setup);
   $$("[data-nav]").forEach((el) => {
     const active =
       el.dataset.nav ===
-      (path === "home" ? "home" : path === "market" ? "market" : path === "interests" ? "interests" : "news");
+      (path === "home" ? "home" : path === "market" ? "market" : "news");
     el.toggleAttribute("aria-current", active);
     if (active) el.setAttribute("aria-current", "page");
   });
@@ -853,7 +846,7 @@ async function render() {
   window.scrollTo({ top: 0, behavior: "instant" });
   document.title = setup
     ? (path === "demo" ? "Компания и должность · Демонстрация" : "Настройка профиля")
-    : (path === "home" ? "Главная" : path === "interests" ? "Темы подборки" : path === "market"
+    : (path === "home" ? "Главная" : path === "market"
           ? "Биржевой обзор"
           : "Бизнес-инсайты") +
       " · Альфа" +
@@ -882,9 +875,11 @@ async function render() {
       tagLabel(a.display_name).localeCompare(tagLabel(b.display_name), "ru"),
     );
     if (path === "home") await home();
-    else if (path === "news") await feed(true);
+    else if (path === "news") {
+      await feed(true);
+      if (version === generation && openPreferences) $("#feed-preferences").open = true;
+    }
     else if (path === "market") await market();
-    else if (path === "interests") interests();
     else if (path === "demo") await demoSetup();
     else if (path.startsWith("analysis/")) await analyse(path.slice(9));
     else
@@ -899,7 +894,6 @@ async function refresh() {
   await render();
 }
 document.addEventListener("click", async (e) => {
-  if (e.target.closest(".settings-link")) closePanel();
   if (e.target.closest(".skip-link")) {
     e.preventDefault();
     main.focus();
@@ -943,7 +937,6 @@ document.addEventListener("click", async (e) => {
       if (route() === "login") await render();
       else location.hash = "login";
     }
-    if (action === "settings") await settings();
     if (action === "demo-setup") location.hash = "demo";
 
     if (action === "catalog-retry") await loadCompanies(catalog.query);
@@ -976,6 +969,16 @@ document.addEventListener("click", async (e) => {
       await render();
     }
     if (action === "refresh" || action === "retry") await refresh();
+    if (action === "cancel-preferences") {
+      const form = $("#interests-form");
+      if (form.querySelector('[type="submit"]').disabled) return;
+      form.reset();
+      form.querySelectorAll(".searchable-topics label").forEach((label) => label.hidden = false);
+      form.querySelector(".tag-search-empty").hidden = true;
+      form.querySelector(".form-error")?.remove();
+      $("#feed-preferences").open = false;
+      $("#feed-preferences > summary").focus();
+    }
     if (action === "feed-filters") {
       const filters = $("#feed-filters");
       filters.hidden = !filters.hidden;
@@ -1186,7 +1189,8 @@ document.addEventListener("submit", async (e) => {
       closePanel();
       if (route() === "news") await render();
       else location.hash = "news";
-      toast("Темы сохранены");
+      $("#feed-preferences > summary")?.focus();
+      toast("Темы сохранены, подборка обновлена");
     }
     if (form.classList.contains("tag-form")) {
       if (!body.getAll("wrong").length && !body.getAll("suggested").length)
