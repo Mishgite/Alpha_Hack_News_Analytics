@@ -1,7 +1,7 @@
 import { UserError, userMessage } from "./api/errors.js";
 import { paths, icon } from "./icons.js";
 import { api, isDemo, roles } from "./api/index.js";
-import { createAnalysisTracker } from "./api/analysis.js";
+import { analysisRevision, createAnalysisTracker } from "./api/analysis.js";
 import { createInteractionTracker } from "./api/interactions.js";
 import {
   analysisStatements,
@@ -205,7 +205,7 @@ async function home() {
     }
     if (token !== generation) return;
     $("#overview-news").innerHTML = state.feed.items.length
-      ? state.feed.items.slice(0, 3).map((item) => `<article class="preview-story" data-news="${esc(item.ranking.news_id)}"><div class="preview-meta">${esc(sourceName(item.source_url))} · ${date(item.published_at)}</div><button data-action="article" data-id="${esc(item.ranking.news_id)}">${esc(item.title)}${icon("chevron")}</button></article>`).join("")
+      ? state.feed.items.slice(0, 3).map((item) => `<article class="preview-story" data-news="${esc(item.ranking.news_id)}"><div class="preview-meta">${esc(sourceName(item.source_url))} · ${date(item.published_at)}</div><button data-impression="${esc(item.ranking.news_id)}" data-action="article" data-id="${esc(item.ranking.news_id)}">${esc(item.title)}${icon("chevron")}</button></article>`).join("")
       : '<p class="widget-status">Свежих новостей пока нет</p>';
     observeImpressions();
   } catch (error) {
@@ -261,7 +261,7 @@ function sourceName(url) {
 }
 function feedCard(item, index) {
   const id = item.ranking.news_id;
-  return `<article class="news-card" data-news="${esc(id)}" style="--order:${Math.min(index, 3)}"><div class="news-meta"><span class="source-dot">${icon("document")}</span>${esc(sourceName(item.source_url))}<span class="meta-divider">·</span><time datetime="${esc(item.published_at)}">${date(item.published_at)}</time></div><h2><button data-action="article" data-id="${esc(id)}">${esc(item.title)}</button></h2><p class="summary">${esc(item.summary)}</p><div class="news-topics"><div class="topic-line">${item.tags.map(tag).join("")}</div><div class="topic-tools"><button class="why-button" data-action="reason" data-id="${esc(id)}">Почему в подборке ${icon("info")}</button><button class="edit-topics" data-action="tag-feedback" data-id="${esc(id)}" aria-expanded="false" aria-controls="tag-editor-${esc(id)}">Исправить темы</button></div><div class="tag-editor" id="tag-editor-${esc(id)}" hidden></div></div><div class="news-actions"><button class="button ${index === 0 ? "primary" : "outline"}" data-action="analyse" data-id="${esc(id)}">${icon("spark")}Разобрать влияние ${icon("arrow")}</button><button class="text-button" data-action="article" data-id="${esc(id)}">Читать новость</button></div><div class="feedback" role="group" aria-label="Приоритет похожих тем"><div><button class="feedback-button ${item.my_reaction === "like" ? "selected" : ""}" data-reaction="like" data-id="${esc(id)}" aria-pressed="${item.my_reaction === "like"}">${icon("plus")}Больше таких тем</button><button class="feedback-button ${item.my_reaction === "dislike" ? "selected" : ""}" data-reaction="dislike" data-id="${esc(id)}" aria-pressed="${item.my_reaction === "dislike"}">${icon("minus")}Меньше таких тем</button></div></div></article>`;
+  return `<article class="news-card" data-news="${esc(id)}" style="--order:${Math.min(index, 3)}"><div class="news-meta"><span class="source-dot">${icon("document")}</span>${esc(sourceName(item.source_url))}<span class="meta-divider">·</span><time datetime="${esc(item.published_at)}">${date(item.published_at)}</time></div><h2 data-impression="${esc(id)}"><button data-action="article" data-id="${esc(id)}">${esc(item.title)}</button></h2><p class="summary">${esc(item.summary)}</p><div class="news-topics"><div class="topic-line">${item.tags.map(tag).join("")}</div><div class="topic-tools"><button class="why-button" data-action="reason" data-id="${esc(id)}">Почему в подборке ${icon("info")}</button><button class="edit-topics" data-action="tag-feedback" data-id="${esc(id)}" aria-expanded="false" aria-controls="tag-editor-${esc(id)}">Исправить темы</button></div><div class="tag-editor" id="tag-editor-${esc(id)}" hidden></div></div><div class="news-actions"><button class="button ${index === 0 ? "primary" : "outline"}" data-action="analyse" data-id="${esc(id)}">${icon("spark")}Разобрать влияние ${icon("arrow")}</button><button class="text-button" data-action="article" data-id="${esc(id)}">Читать новость</button></div><div class="feedback" role="group" aria-label="Приоритет похожих тем"><div><button class="feedback-button ${item.my_reaction === "like" ? "selected" : ""}" data-reaction="like" data-id="${esc(id)}" aria-pressed="${item.my_reaction === "like"}">${icon("plus")}Больше таких тем</button><button class="feedback-button ${item.my_reaction === "dislike" ? "selected" : ""}" data-reaction="dislike" data-id="${esc(id)}" aria-pressed="${item.my_reaction === "dislike"}">${icon("minus")}Меньше таких тем</button></div></div></article>`;
 }
 function feedBody() {
   const f = state.feed;
@@ -311,28 +311,41 @@ async function feed(reuse = false) {
       $("#feed-results").innerHTML = failure(e, "refresh");
   }
 }
-const observer = new IntersectionObserver(
-  (entries) => {
-    for (const e of entries)
-      if (
-        e.isIntersecting &&
-        e.intersectionRatio >= 0.5 &&
-        document.visibilityState === "visible" &&
-        !dialog.open &&
-        state.feed
-      ) {
-        interactions
-          .impression(state.feed.snapshot_id, e.target.dataset.news)
-          .then(() => observer.unobserve(e.target))
-          .catch(() => {});
-      }
-  },
-  { threshold: 0.5 },
-);
+function createImpressionObserver() {
+  const bottom = $(".mobile-nav")?.getBoundingClientRect().height || 0;
+  const watcher = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries)
+        if (
+          e.isIntersecting &&
+          e.target.isConnected &&
+          e.intersectionRatio >= 0.5 &&
+          document.visibilityState === "visible" &&
+          !dialog.open &&
+          state.feed?.items.some((item) => item.ranking.news_id === e.target.dataset.impression)
+        ) {
+          interactions
+            .impression(state.feed.snapshot_id, e.target.dataset.impression)
+            .then(() => watcher.unobserve(e.target))
+            .catch(() => {});
+        }
+    },
+    { threshold: 0.5, rootMargin: `0px 0px -${bottom}px 0px` },
+  );
+  return watcher;
+}
+let observer = createImpressionObserver();
 function observeImpressions() {
   observer.disconnect();
-  $$("[data-news]").forEach((x) => observer.observe(x));
+  observer = createImpressionObserver();
+  $$("[data-impression]").forEach((x) => observer.observe(x));
 }
+
+let impressionResizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(impressionResizeTimer);
+  impressionResizeTimer = setTimeout(observeImpressions, 100);
+});
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") observeImpressions();
 });
@@ -392,7 +405,7 @@ function companyResults(items) {
 }
 function interests() {
   const p = state.profile;
-  main.innerHTML = `<section class="interests-page"><a class="back-link" href="#news">← К подборке</a><header><h1>Темы подборки</h1><p>Настройка новостей для ${esc(p.company.id)}</p></header><form id="interests-form"><h3>Темы компании</h3><p class="field-hint">Выбранные темы повышают приоритет новостей. Отключение действует только для вас.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("")}</div><h3>Личные интересы</h3><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.map((t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${p.personal_tag_ids.includes(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`).join("")}</div><p class="field-hint">Отключённые темы компании не учитываются, даже если выбраны ниже. Это влияет на порядок, а не скрывает новости.</p><div class="sticky-form-actions"><button class="button primary" type="submit">Сохранить и обновить ленту</button><a class="button ghost" href="#news">Отмена</a></div></form></section>`;
+  main.innerHTML = `<section class="interests-page"><a class="back-link" href="#news">← К подборке</a><header><h1>Темы подборки</h1><p>Настройка новостей для ${esc(p.company.id)}</p></header><form id="interests-form"><h3>Темы компании</h3><p class="field-hint">Выбранные темы повышают приоритет новостей. Отключение действует только для вас.</p><div class="topic-options">${p.company_tags.map((t) => `<label><input type="checkbox" name="company-topic" value="${esc(t.tag_id)}" ${p.disabled_tag_ids.includes(t.tag_id) ? "" : "checked"}><span><strong>${esc(tagName(t.tag_id))}</strong></span></label>`).join("")}</div><h3>Личные интересы</h3><label>Поиск темы<input type="search" id="topic-search" placeholder="Например, кредитование"></label><div class="personal-options searchable-topics">${state.tags.map((t) => `<label><input type="checkbox" name="personal" value="${esc(t.id)}" ${p.personal_tag_ids.includes(t.id) ? "checked" : ""}>${esc(tagLabel(t.display_name))}</label>`).join("")}</div><p class="field-hint">Отключённые темы не участвуют в подборе, даже если добавлены в личные интересы.</p><div class="sticky-form-actions"><button class="button primary" type="submit">Сохранить и обновить ленту</button><a class="button ghost" href="#news">Отмена</a></div></form></section>`;
 }
 function companyInfo() {
   const c = state.profile.company;
@@ -484,11 +497,13 @@ async function analyse(id) {
       a,
       `<section class="analysis-loading"><div class="analysis-orb">${icon("spark")}</div><h2 id="job-label">Загружаем разбор</h2><p>Сопоставляем событие с контекстом ${esc(state.profile.company.id)}</p><div class="job-progress"><i></i></div><a class="text-button" href="#news">Вернуться к ленте</a></section>`,
     );
+    const revision = await analysisRevision(state.profile.company, a);
+    if (version !== generation) return;
     let job = await tracker.start(
       state.profile.user.id,
       state.profile.company.id,
       id,
-      state.profile.company.profile_version + ":" + a.content_hash,
+      revision,
     );
     const pollingStarted = Date.now();
     while (job.status !== "ready" && job.status !== "failed") {

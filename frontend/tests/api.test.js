@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHttpClient } from "../src/api/http.js";
-import { createAnalysisTracker } from "../src/api/analysis.js";
+import { analysisRevision, createAnalysisTracker } from "../src/api/analysis.js";
 
 function storage() {
   const values = new Map();
@@ -180,4 +180,71 @@ test("готовый разбор читается без POST, изменени
   tracker.complete("user", "company", "news", new Date(0).toISOString());
   await tracker.start("user", "company", "news", "v2");
   assert.equal(calls.at(-1), "POST");
+});
+
+test("одновременное открытие одного разбора отправляет один запрос", async () => {
+  let release;
+  const calls = [];
+  const tracker = createAnalysisTracker({ request: async (...args) => {
+    calls.push(args);
+    return new Promise((resolve) => { release = resolve; });
+  }}, storage());
+  const first = tracker.start("user", "company", "news", "v1");
+  const second = tracker.start("user", "company", "news", "v1");
+  assert.equal(calls.length, 1);
+  release({id: "job", status: "queued"});
+  assert.deepEqual(await first, await second);
+});
+
+test("поздний ответ старой версии не заменяет новое задание", async () => {
+  const requests = [];
+  const tracker = createAnalysisTracker({ request: async (method, path) => {
+    if (method === "GET") return {id: path.split("/").at(-1), status: "ready"};
+    return new Promise((resolve) => requests.push(resolve));
+  }}, storage());
+  const old = tracker.start("user", "company", "news", "v1");
+  const current = tracker.start("user", "company", "news", "v2");
+  requests[1]({id: "new-job", status: "ready"});
+  await current;
+  requests[0]({id: "old-job", status: "ready"});
+  await old;
+  const restored = tracker.start("user", "company", "news", "v2");
+  assert.equal(requests.length, 2);
+  assert.equal((await restored).id, "new-job");
+});
+
+test("изменение даты, признаков или данных компании обновляет версию разбора", async () => {
+  const company = { id: "company", profile_version: "v1", city: "Москва" };
+  const news = { content_hash: "same-text", published_at: "2026-10-25T00:00:00Z", features: { summary: "Первый вариант" } };
+  const initial = await analysisRevision(company, news);
+  assert.equal(initial.length, 64);
+  assert.equal(await analysisRevision({city: "Москва", profile_version: "v1", id: "company"}, news), initial);
+  for (const changed of [
+    { ...news, published_at: "2026-10-24T00:00:00Z" },
+    { ...news, features: {summary: "Исправленный вариант"} },
+    { ...news, tagging_version: "new-tagger" },
+  ]) assert.notEqual(await analysisRevision(company, changed), initial);
+  assert.notEqual(await analysisRevision({...company, city: "Казань"}, news), initial);
+});
+
+test("запрет записи в хранилище не восстанавливает забытое задание", async () => {
+  const saved = storage();
+  let writesFail = false;
+  const unreliable = {
+    getItem: saved.getItem,
+    setItem: (key, value) => {
+      if (writesFail) throw new Error("Quota exceeded");
+      saved.setItem(key, value);
+    },
+  };
+  const calls = [];
+  const tracker = createAnalysisTracker({request: async (method) => {
+    calls.push(method);
+    return {id: "job", status: "ready"};
+  }}, unreliable);
+  await tracker.start("user", "company", "news", "v1");
+  writesFail = true;
+  tracker.forget("user", "company", "news");
+  await tracker.start("user", "company", "news", "v1");
+  assert.deepEqual(calls, ["POST", "POST"]);
 });
