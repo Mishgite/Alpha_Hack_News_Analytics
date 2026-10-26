@@ -52,12 +52,20 @@ def build_profile(inputs: ProfileInputs, policy: ProfilePolicy) -> RankingProfil
     for tag_id in inputs.disabled_tag_ids:
         weights[tag_id] = 0.0
     company = inputs.company
+    from .company_topics import counterparty_topics
+
+    indirect = {
+        tag: weight
+        for tag, weight in counterparty_topics(company).items()
+        if tag not in inputs.disabled_tag_ids
+    }
     country, registered, operating = company_geography(company)
     return RankingProfile(
         user_id=inputs.user.id,
         company_id=company.id,
         job_role=inputs.user.job_role,
         tag_weights=weights,
+        counterparty_tag_weights=indirect,
         company_tag_ids=sorted(
             (
                 {tag.tag_id for tag in initial_company_topics(company)}

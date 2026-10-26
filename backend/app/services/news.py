@@ -40,6 +40,30 @@ class NewsService:
         with self._uow() as db:
             return db.news.list_tags()
 
+    def separate_event(self, news_id: UUID) -> StoredNews:
+        """отменяет объединение публикации и защищает её от повторного автоматического объединения"""
+        with self._uow() as db:
+            db.events.separate(news_id)
+            result = db.news.get(news_id)
+            db.commit()
+            return result
+
+    def group_existing_news(self, *, days: int = 30, limit: int = 5000) -> int:
+        """обрабатывает сохранённые новости короткими транзакциями без повторной разметки и вызовов LLM"""
+        from datetime import UTC, timedelta
+
+        if not 1 <= days <= 365 or not 1 <= limit <= 5000:
+            raise ValueError("Invalid event grouping window or limit")
+        with self._uow() as db:
+            ids = db.events.list_recent_ids(
+                datetime.now(UTC) - timedelta(days=days), limit
+            )
+        for news_id in ids:
+            with self._uow() as db:
+                db.events.assign_id(news_id)
+                db.commit()
+        return len(ids)
+
     def sync_tag_catalog(self, *, catalog_path=None) -> int:
         """загружает тематические коды справочника в БД, географию не превращает в темы"""
         catalog = load_catalog(catalog_path)

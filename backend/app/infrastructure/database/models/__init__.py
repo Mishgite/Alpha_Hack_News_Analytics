@@ -17,6 +17,7 @@ from app.infrastructure.database.models.market import Stock, StockSnapshot
 from app.infrastructure.database.models.news import (
     News,
     NewsAttribution,
+    NewsEvent,
     NewsSource,
     NewsTag,
     ReactionTotal,
@@ -56,6 +57,7 @@ __all__ = [
     "LLMUsage",
     "News",
     "NewsAttribution",
+    "NewsEvent",
     "NewsSource",
     "NewsTag",
     "ReactionTotal",
@@ -74,3 +76,4 @@ __all__ = [
 ]
 
 from .runtime import ProcessingState  # noqa: F401
+from .quality import AnalysisFeedback  # noqa: F401

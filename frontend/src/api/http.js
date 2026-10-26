@@ -2,6 +2,7 @@ import { messages, UserError } from "./errors.js";
 
 const details = {
   "Analysis worker unavailable": "Разбор временно недоступен. Попробуйте позже",
+  "Analysis generation paused": "Новые разборы и ответы временно недоступны. Сохранённые разборы можно читать",
   "Database unavailable": "Не удалось загрузить данные. Попробуйте позже",
   "Source PDF is not available": "Документ недоступен. Остальные источники можно открыть в разборе",
   "Source PDF could not be read": "Не удалось открыть документ. Попробуйте позже",

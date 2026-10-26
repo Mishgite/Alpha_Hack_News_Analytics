@@ -8,10 +8,12 @@ import os
 import re
 import sys
 import tempfile
+import time
 from collections import Counter, defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from uuid import uuid4
 
 if __name__ == "__main__" and not __package__:
@@ -145,6 +147,8 @@ def import_companies(
     service: ProfileService | None = None,
     output_dir: Path | None = None,
     company_ids: list[str] | None = None,
+    min_revenue: Decimal | None = None,
+    enrich_context: bool = False,
 ) -> dict:
     """проверяет весь CSV и добавляет выбранные профили порциями, записывая причины пропусков"""
     if limit is not None and (
@@ -161,6 +165,10 @@ def import_companies(
         if limit != len(company_ids):
             raise ValueError("Количество ID в списке не совпадает с --limit")
     requested = set(company_ids) if company_ids is not None else None
+    if min_revenue is not None and (not min_revenue.is_finite() or min_revenue < 0):
+        raise ValueError(
+            "Минимальная выручка должна быть конечным неотрицательным числом"
+        )
     print("Проверка CSV:", source)
     checksum = file_hash(source)
     # исключаем все строки с повторным ID, даже если они находятся за пределами выборки
@@ -181,6 +189,8 @@ def import_companies(
         "status": "validating",
         "rows": 0,
         "valid": 0,
+        "below_min_revenue": 0,
+        "min_revenue": str(min_revenue) if min_revenue is not None else None,
         "rejected": 0,
         "selected": 0,
         "created": 0,
@@ -226,6 +236,11 @@ def import_companies(
                         )
                         continue
                     result["valid"] += 1
+                    if min_revenue is not None and (
+                        company.revenue is None or company.revenue <= min_revenue
+                    ):
+                        result["below_min_revenue"] += 1
+                        continue
                     if requested is not None:
                         if company.id in requested:
                             selected.write(company.model_dump_json() + "\n")
@@ -293,6 +308,22 @@ def import_companies(
                 service = service if service is not None else ProfileService()
                 result["status"] = "importing"
                 selected.seek(0)
+                if enrich_context:
+                    if limit is None or limit > 500:
+                        raise ValueError(
+                            "Обогащение связями ограничено порцией до 500 компаний"
+                        )
+                    from app.services.company_context import enrich_companies
+
+                    enriched = enrich_companies(
+                        [CompanyData.model_validate_json(line) for line in selected],
+                        source.parent,
+                    )
+                    selected.seek(0)
+                    selected.truncate()
+                    for company in enriched:
+                        selected.write(company.model_dump_json() + "\n")
+                    selected.seek(0)
                 batch = []
                 for line in selected:
                     batch.append(CompanyData.model_validate_json(line))
@@ -349,12 +380,18 @@ def save_selection(company_ids: list[str], path: Path) -> None:
                 temporary.unlink(missing_ok=True)
 
 
-def prepare_companies(result: dict, *, pipeline=None, runtime=None) -> dict:
+def prepare_companies(result: dict, *, pipeline=None, runtime=None, retries=0) -> dict:
     """получает темы выбранных компаний и публикует выборку после успешной разметки всех профилей"""
     from app.services.ai_agents._common import settings, validate_configuration
     from app.services.profile_pipeline import TAGGING_VERSION, ProfilePipeline
     from app.services.runtime import RuntimeService
 
+    if (
+        isinstance(retries, bool)
+        or not isinstance(retries, int)
+        or not 0 <= retries <= 3
+    ):
+        raise ValueError("retries must be an integer between 0 and 3")
     config = settings()
     validate_configuration(config, "LLM_MODEL_CONTEXT")
     version = TAGGING_VERSION + config["LLM_MODEL_CONTEXT"]
@@ -366,7 +403,27 @@ def prepare_companies(result: dict, *, pipeline=None, runtime=None) -> dict:
     try:
         for index, company_id in enumerate(result["company_ids"], 1):
             result["current_company"] = company_id
-            changed = pipeline.prepare_company(company_id, version)
+            for attempt in range(retries + 1):
+                try:
+                    changed = pipeline.prepare_company(company_id, version)
+                    break
+                except RuntimeError as error:
+                    cause = error.__cause__
+                    temporary = (
+                        cause.code in {429, 502, 503, 504}
+                        if isinstance(cause, HTTPError)
+                        else isinstance(cause, (URLError, TimeoutError))
+                    )
+                    if attempt == retries or not temporary:
+                        raise
+                    # при временном отказе шлюза ждём перед повтором, лимит проверится заново
+                    delay = 15 * (attempt + 1)
+                    status = getattr(cause, "code", "network")
+                    print(
+                        f"Шлюз временно недоступен ({status}), повтор через {delay} с",
+                        flush=True,
+                    )
+                    time.sleep(delay)
             result["tagged" if changed else "ready"] += 1
             summary.write_text(
                 json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -414,6 +471,11 @@ def main() -> int:
     )
     parser.add_argument("--source", type=Path, default=SOURCE_PATH)
     parser.add_argument(
+        "--min-revenue",
+        default="15000000000",
+        help="для демовыборки выручка должна превышать этот порог, по умолчанию 15 млрд рублей",
+    )
+    parser.add_argument(
         "--ids", type=Path, help="файл с ID выбранных компаний, по одному в строке"
     )
     args = parser.parse_args()
@@ -447,7 +509,12 @@ def main() -> int:
             else None
         )
         result = import_companies(
-            args.source, limit=limit, check_only=args.check, company_ids=ids
+            args.source,
+            limit=limit,
+            check_only=args.check,
+            company_ids=ids,
+            min_revenue=None if args.all else Decimal(args.min_revenue),
+            enrich_context=not args.all,
         )
         if not args.check and not args.skip_tagging:
             if limit == 50 and not selection:
@@ -473,7 +540,7 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    except (OSError, ValueError, csv.Error) as error:
+    except (OSError, ValueError, InvalidOperation, csv.Error) as error:
         print(str(error), file=sys.stderr)
         return 1
     except Exception as error:  # noqa: BLE001

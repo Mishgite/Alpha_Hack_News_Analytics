@@ -149,6 +149,7 @@ export const demo = (() => {
       : {};
   let scenario = "normal";
   const snapshots = new Map(),
+    usefulness = new Map(),
     analyses = new Map(),
     jobs = new Map(),
     conversations = new Map(),
@@ -597,6 +598,12 @@ export const demo = (() => {
       if (!j || j.company_id !== user.company_id)
         throw error(404, "Разбор больше недоступен");
       return { ...j };
+    }
+    if (/^\/api\/analyses\/[^/]+\/feedback$/.test(p)) {
+      const id = p.split("/")[3];
+      if (!analyses.has(id)) throw new Error("Разбор не найден");
+      if (method === "PUT") usefulness.set(id, body.useful);
+      return { useful: usefulness.get(id) ?? null };
     }
     if (p.startsWith("/api/analyses/")) {
       const id = p.split("/")[3],

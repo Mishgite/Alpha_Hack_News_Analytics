@@ -16,6 +16,7 @@ from app.schemas.database import (
     QuestionData,
     UserData,
 )
+from app.schemas.quality import UsefulnessRating
 from app.services import InsightService
 from app.services.questions import QuestionService
 from app.services.ranking import RANKING_VERSION
@@ -25,6 +26,33 @@ from app.services.runtime import RuntimeService
 from .dependencies import get_current_user, get_insight_service
 
 router = APIRouter(tags=["AI-разбор"])
+
+
+def get_quality_service():
+    from app.services.quality import QualityService
+
+    return QualityService()
+
+
+@router.get("/analyses/{analysis_id}/feedback")
+def get_usefulness(
+    analysis_id: UUID,
+    user: UserData = Depends(get_current_user),
+    service=Depends(get_quality_service),
+):
+    """возвращает личную оценку после проверки доступа к разбору"""
+    return service.feedback(user.id, analysis_id)
+
+
+@router.put("/analyses/{analysis_id}/feedback")
+def set_usefulness(
+    analysis_id: UUID,
+    data: UsefulnessRating,
+    user: UserData = Depends(get_current_user),
+    service=Depends(get_quality_service),
+):
+    """сохраняет оценку разбора, не меняя интересы и рейтинг новостей"""
+    return service.feedback(user.id, analysis_id, data.useful, write=True)
 
 
 def get_runtime_service():
@@ -51,7 +79,9 @@ def request_analysis(
     runtime: RuntimeService = Depends(get_runtime_service),
 ):
     """возвращает прежнее задание, для нового запроса проверяет доступность worker"""
-    existing = service.find_requested_job(user.id, news_id, idempotency_key=data.idempotency_key)
+    existing = service.find_requested_job(
+        user.id, news_id, idempotency_key=data.idempotency_key
+    )
     if existing is not None:
         return existing
     state = runtime.get("worker")
@@ -62,6 +92,8 @@ def request_analysis(
         or not state["value"].get("analysis_enabled")
     ):
         raise HTTPException(503, "Analysis worker unavailable")
+    if not runtime.generation_available():
+        raise HTTPException(503, "Analysis generation paused")
     return service.request_analysis(
         user.id, news_id, idempotency_key=data.idempotency_key
     )
@@ -108,8 +140,11 @@ async def ask_question(
     data: QuestionRequest,
     user: UserData = Depends(get_current_user),
     service: QuestionService = Depends(get_question_service),
+    runtime: RuntimeService = Depends(get_runtime_service),
 ):
     """возвращает и сохраняет проверенный ответ в контексте исходного разбора"""
+    if not runtime.generation_available():
+        raise HTTPException(503, "Analysis generation paused")
     return await service.ask(user.id, analysis_id, data.conversation_id, data.question)
 
 
@@ -188,8 +223,13 @@ def get_processing_status(
     return {
         "database": "ready",
         "worker_alive": alive,
-        "analysis_available": bool(alive and state["value"].get("analysis_enabled")),
+        "analysis_available": bool(
+            alive
+            and state["value"].get("analysis_enabled")
+            and runtime.generation_available()
+        ),
         "ranking": RANKING_VERSION,
         "market": runtime.get("market"),
         "llm_budget": runtime.get("llm_budget"),
+        "monitoring": runtime.get("monitoring"),
     }

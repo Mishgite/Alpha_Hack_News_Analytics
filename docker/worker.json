@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {"code": "cbr", "url": "https://www.cbr.ru/rss/RssPress", "limit": 30, "full_text": false},
+    {"code": "tass", "url": "https://tass.ru/rss/v2.xml", "limit": 10, "full_text": true, "categories": ["Экономика и бизнес"]},
+    {"code": "interfax", "url": "https://www.interfax.ru/rss.asp", "limit": 10, "full_text": true, "categories": ["Экономика"]}
+  ],
+  "fetch_interval": 900,
+  "tagging_interval": 300,
+  "tagging_batch": 1,
+  "profile_interval": 120,
+  "profile_batch": 1,
+  "market_interval": 900,
+  "market_enabled": true
+}

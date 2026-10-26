@@ -932,5 +932,23 @@ CREATE TABLE public.processing_states (
     CONSTRAINT pk_processing_states PRIMARY KEY (key)
 );
 
+CREATE TABLE public.news_events (
+    id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    matching_version text NOT NULL,
+    automatic boolean DEFAULT true NOT NULL,
+    CONSTRAINT pk_news_events PRIMARY KEY (id)
+);
+
+CREATE INDEX ix_news_event_window ON public.news (language, published_at);
+
+CREATE TABLE public.analysis_feedback (
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    analysis_id uuid NOT NULL REFERENCES public.ai_analyses(id) ON DELETE CASCADE,
+    useful boolean NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (user_id, analysis_id)
+);
+
 
 

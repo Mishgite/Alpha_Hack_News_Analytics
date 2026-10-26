@@ -5,11 +5,9 @@ from app.schemas.tagging import NewsTaggingOutput
 from app.services.tag_catalog import load_catalog
 
 from ._common import (
-    model_object,
-    normalize_city_codes,
+    model_features,
     settings,
     validate_configuration,
-    validate_features,
 )
 from .bad_news import load_bad_news
 
@@ -41,9 +39,10 @@ class NewsTagger:
             {**row, "title": row["title"][:500], "text": row["text"][:3000]}
             for row in examples
         ]
-        output = model_object(
+        output = model_features(
             "LLM_MODEL_TAGGING",
             "Выдели темы, тип события, экономические факторы, отрасли и краткое изложение фактов. "
+            "Краткое изложение summary пиши по-русски, названия иностранных компаний можно сохранить. "
             "business_scope: general для общих правил и рыночных условий, industry для "
             "изменений условий отрасли, local для местной инфраструктуры и мер, organization "
             "для события отдельной организации без подтверждённых последствий для отрасли, "
@@ -73,8 +72,4 @@ class NewsTagger:
             NewsTaggingOutput,
             self.transport,
         )
-        normalize_city_codes(output, self.catalog)
-        validate_features(output, self.catalog)
-        if set(output.industries) - set(self.catalog["business"].values()):
-            raise ValueError("Unknown industry code")
         return NewsFeatures(news_id=news.news_id, **output.model_dump())

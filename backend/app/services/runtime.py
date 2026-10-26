@@ -1,5 +1,7 @@
 """учёт фоновых процессов и ограничение обращений к модели"""
 
+from datetime import UTC, datetime
+
 from app.infrastructure.database.uow import UnitOfWork
 
 
@@ -28,8 +30,39 @@ class RuntimeService:
             db.commit()
             return result
 
+    def record_operation(self, name, seconds, success):
+        """записывает длительность и результат завершённой фоновой операции"""
+        with self._uow() as db:
+            db.runtime.record_operation(name, seconds, success)
+            db.commit()
+
     def finish_call(self, call_id, status, usage):
         """дополняет зарезервированный вызов результатом провайдера"""
         with self._uow() as db:
             db.runtime.finish_call(call_id, status, usage)
             db.commit()
+
+    def generation_available(self):
+        """проверяет известные ограничения до постановки задания, без запроса к провайдеру"""
+        from app.services.ai_agents._common import settings
+
+        limit = int(settings().get("LLM_DAILY_REQUEST_LIMIT", "30"))
+        with self._uow() as db:
+            if db.runtime.calls_today() >= limit:
+                return False
+            budget = db.runtime.get("llm_budget")
+        if budget:
+            value = budget["value"]
+            reset = value.get("reset_at")
+            try:
+                reset_at = datetime.fromisoformat(reset) if reset else None
+                expired = reset_at is not None and reset_at.astimezone(
+                    UTC
+                ) <= datetime.now(UTC)
+            except (TypeError, ValueError):
+                expired = False
+            if not expired and value.get("remaining", float("inf")) <= value.get(
+                "reserve", 0
+            ):
+                return False
+        return True

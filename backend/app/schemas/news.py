@@ -57,8 +57,17 @@ class NewsFeatures(BusinessContext):
     summary: str | None = None
 
 
+class NewsPublication(NewsForTagging):
+    """исходная публикация события со своей ссылкой, датой и версией текста"""
+
+    publication_id: UUID
+    content_hash: str
+
+
 class StoredNews(NewsForTagging):
     content_hash: str
     tagging_status: str
     tagging_version: str | None = None
     features: NewsFeatures | None = None
+    event_id: UUID | None = None
+    publications: list[NewsPublication] = Field(default_factory=list)

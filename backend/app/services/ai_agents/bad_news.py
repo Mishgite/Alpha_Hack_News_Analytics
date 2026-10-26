@@ -12,7 +12,7 @@ from app.services.tag_catalog import APP_ROOT, load_catalog
 
 from ._common import object_input, validate_tags
 
-DEFAULT_PATH = APP_ROOT / "bad_news.json"
+DEFAULT_PATH = Path(os.environ.get("BAD_NEWS_PATH", str(APP_ROOT / "bad_news.json")))
 
 
 @contextmanager

@@ -467,3 +467,6 @@ from app.schemas.insights import InsightResult, SourceReference
 - При ошибке сохраняет статус `failed` и пробрасывает исключение; повторный вызов продолжает обработку
 
 Для загрузки 50 компаний из CSV используется [import_companies.py](../app/import_companies.py), порядок запуска в [инструкции](run.md#4-компании-из-csv)
+
+
+Оценки полезности, проверки качества и мониторинг: [QualityService и команды](quality.md)
