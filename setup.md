@@ -1,11 +1,12 @@
 # Установка, запуск и тестирование
 
-[Обзор проекта](readme.md) · [API](readme.md#api) · [PyCharm](#запуск-в-pycharm) · [PostgreSQL](#5-postgresql)
+[Обзор проекта](README.md) · [API](README.md#api) · [PyCharm](#запуск-в-pycharm) · [PostgreSQL](#5-postgresql)
 
 ## Выбрать режим
 
 | Режим | Что нужно | Что работает |
 |---|---|---|
+| **Docker** | Docker + Compose | БД, 50 компаний, 104 новости, фрагменты аналитики, API, worker и frontend; ключ нужен для новых AI-запросов |
 | **Интерфейс** | Node.js | Экраны и сценарии на синтетических данных, без серверных запросов |
 | **API + БД** | Python, PostgreSQL, Node.js | Профили, теги, сохранённые новости, лента и реакции |
 | **Полный** | Всё выше + ключ LLM + worker | Свежие новости, разметка, AI-разборы и уточнения |
@@ -20,7 +21,7 @@
 | PostgreSQL | **17.x** |
 | Node.js | **22.12+**, npm из комплекта |
 | Git | Для клонирования |
-| Docker + Compose | Если запускаем PostgreSQL в контейнере |
+| Docker + Compose | Для запуска всего приложения в контейнерах |
 
 ```bash
 git clone https://github.com/Mishgite/Alpha_Hack_News_Analytics.git
@@ -125,7 +126,7 @@ python backend/app/infrastructure/database/init_db.py
 
 ## 6. Данные для старта
 
-### Проверить приложение без ключа модели
+### Минимальная синтетическая проверка при ручном запуске
 
 ```bash
 python backend/app/demo_data.py
@@ -133,7 +134,7 @@ python backend/app/demo_data.py
 
 Скрипт создаёт компанию `demo-api-company` и **3 синтетические новости**. Выбрать эту компанию в интерфейсе. Можно проверять API, профиль, ленту и реакции; для AI-разбора нужен реальный LLM и worker.
 
-### Подключить материалы хакатона
+### Полный локальный корпус при ручном запуске
 
 | Материал | Путь | Назначение |
 |---|---|---|
@@ -142,7 +143,7 @@ python backend/app/demo_data.py
 | `manifest.json` + JSON страниц | `backend/data/reports_processed/` | Подготовленная аналитика банка |
 | Исходные PDF | `backend/data/reports/` | Открытие оригинала цитируемого документа |
 
-CSV и отчёты получить у команды; в Git они не хранятся. Без `selection.txt` импорт сам выбирает 50 компаний и сохраняет их ID.
+Для этого расширенного режима CSV и полные отчёты получить у команды; в Git они не хранятся. Для Docker-демонстрации они не нужны. Без `selection.txt` импорт сам выбирает 50 компаний и сохраняет их ID.
 
 ```bash
 python backend/app/import_companies.py --check
@@ -175,7 +176,7 @@ python -m pip install pymupdf openpyxl
 Чтобы импортировать исходные материалы в Docker, положить их в `backend/app/newspaper_parser/data/` и выполнить:
 
 ```bash
-docker compose --env-file docker/.env --profile ingest -f docker/compose.yaml run --build --rm parser python -m app.newspaper_parser.newspaper_parser --keep-files
+docker compose --env-file docker/.env --profile ingest -f docker/compose.yaml run --build --rm parser
 ```
 
 `--keep-files` сохраняет входные файлы после импорта. Для XLSX в контейнер также потребуется добавить `openpyxl`.
@@ -286,7 +287,7 @@ npm run build
 |---|---|
 | `No module named ...` | Активное окружение и `python -m pip install -r requirements.txt` из корня |
 | `No module named app` | Модули `python -m app...` запускаются из `backend`; прямые команды выше — из корня |
-| Ошибка соединения с БД | Служба / контейнер, пароль и порт: `5432` локально или `5433` через Compose |
+| Ошибка соединения с БД | При ручном запуске: служба, пароль и порт `5432`. В Compose: состояние `database`, адрес `database:5432` внутри сети; порт БД на хост не публикуется |
 | `npm.ps1` заблокирован | На Windows использовать `npm.cmd ci`, `npm.cmd run dev` |
 | Порт 5173 или 8000 занят | Остановить предыдущий процесс |
 | Интерфейс не получает данные | `/health`, `VITE_API_URL`, CORS, перезапуск после изменения `.env` |
@@ -298,7 +299,7 @@ npm run build
 
 ## Остановка и обновление
 
-Процессы API, frontend и worker: `Ctrl+C`. БД Docker:
+При ручном запуске API, frontend и worker останавливаются через `Ctrl+C`. Весь Docker-контур:
 
 ```bash
 docker compose --env-file docker/.env -f docker/compose.yaml down
