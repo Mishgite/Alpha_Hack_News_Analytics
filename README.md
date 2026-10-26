@@ -207,23 +207,25 @@ erDiagram
 
 | Слой | Технологии |
 |---|---|
-| Web | Vanilla JavaScript, HTML, CSS, Vite 8; Node.js 22.12+ |
+| Web | Vanilla JavaScript, HTML, CSS, Vite 8; Node.js 22.12.0 (`frontend/.nvmrc`) |
 | HTTP API | FastAPI, Uvicorn, Pydantic, pydantic-settings |
 | Хранение | PostgreSQL 17, SQLAlchemy 2, psycopg 3, JSONB, полнотекстовый поиск |
 | Сбор данных | httpx, feedparser, Beautiful Soup, trafilatura, pandas |
 | AI | Qwen3.6 35B A3B для новостей; GLM-5.3-Flash для профилей и анализа |
 | Документы | Подготовленные JSON; отдельный PDF/OCR-парсер на PyMuPDF и Tesseract |
 | Проверки | pytest, unittest, FastAPI TestClient, Node.js test runner |
-| Окружение | Docker Compose для БД и импорта, конфигурации PyCharm, GitHub Actions для фронтенда |
+| Окружение | Docker Compose для локального стека, конфигурации PyCharm, GitHub Actions для фронтенда |
 
 ```text
 .
-├── readme.md                       # Обзор и схемы
+├── README.md                       # Обзор и схемы
 ├── setup.md                        # Установка, запуск, тесты
 ├── requirements.txt                # Подключает зависимости backend
 ├── Alpha_Hack_News_Analytics.pptx   # Презентация проекта
 ├── backend/
 │   ├── app/
+│   │   ├── requirements.txt        # Исходный список Python-зависимостей
+│   │   ├── requirements.lock       # Версии и хэши Python-зависимостей
 │   │   ├── api/                    # REST-маршруты
 │   │   ├── services/ai_agents/     # Разметчики и RAG-агент
 │   │   ├── services/               # Правила приложения
@@ -235,8 +237,10 @@ erDiagram
 │   │   └── worker.py               # Фоновая обработка
 │   └── data/examples/              # Набор новостей для демонстрации
 ├── frontend/src/                   # Интерфейс, API-клиент, деморежим
+├── frontend/.nvmrc                 # Рекомендуемая точная версия Node.js
+├── frontend/package-lock.json      # Lock-файл npm
 ├── frontend/tests/                 # Проверки фронтенда
-├── docker/                         # PostgreSQL и контейнер импорта
+├── docker/                         # Compose, API, frontend, PostgreSQL и импорт
 └── .run/                           # Готовые конфигурации PyCharm
 ```
 
@@ -251,6 +255,15 @@ npm run demo
 ```
 
 Открыть **http://127.0.0.1:5173**. Этот режим использует синтетические данные и имитацию API.
+
+Полный локальный запуск через Docker Compose:
+
+```bash
+[ -f docker/.env ] || cp docker/.env.example docker/.env
+docker compose --env-file docker/.env -f docker/compose.yaml up --build -d
+```
+
+Откройте **http://127.0.0.1:5173**. Compose запускает PostgreSQL, API и frontend; worker включается отдельным профилем и требует настроенного LLM-ключа. Другие сценарии Docker — в [docker/README.md](docker/README.md).
 
 Полное приложение: **[setup.md](setup.md)** — Python, PostgreSQL, зависимости, данные, API, worker и тесты.
 

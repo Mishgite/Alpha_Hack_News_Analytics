@@ -32,6 +32,101 @@ services:
         condition: service_healthy
     restart: "no"
 
+  api:
+    image: alpha-news-backend:local
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+      API_DEMO_ENABLED: ${API_DEMO_ENABLED:-true}
+      API_CORS_ORIGINS: '${API_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}'
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://changellenge.up.railway.app/v1}
+      LLM_MODEL_TAGGING: ${LLM_MODEL_TAGGING:-qwen/qwen3.6-35b-a3b}
+      LLM_MODEL_CONTEXT: ${LLM_MODEL_CONTEXT:-z-ai/glm-5.3-flash}
+      LLM_MODEL_ANALYSIS: ${LLM_MODEL_ANALYSIS:-z-ai/glm-5.3-flash}
+      LLM_DAILY_REQUEST_LIMIT: ${LLM_DAILY_REQUEST_LIMIT:-100}
+      LLM_BUDGET_RESERVE_RUB: ${LLM_BUDGET_RESERVE_RUB:-50}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-8192}
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "app.api.application:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    image: alpha-news-frontend:local
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      VITE_API_URL: http://127.0.0.1:${API_PORT:-8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5173/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  worker:
+    image: alpha-news-backend:local
+    profiles: ["worker"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://changellenge.up.railway.app/v1}
+      LLM_MODEL_TAGGING: ${LLM_MODEL_TAGGING:-qwen/qwen3.6-35b-a3b}
+      LLM_MODEL_CONTEXT: ${LLM_MODEL_CONTEXT:-z-ai/glm-5.3-flash}
+      LLM_MODEL_ANALYSIS: ${LLM_MODEL_ANALYSIS:-z-ai/glm-5.3-flash}
+      LLM_DAILY_REQUEST_LIMIT: ${LLM_DAILY_REQUEST_LIMIT:-100}
+      LLM_BUDGET_RESERVE_RUB: ${LLM_BUDGET_RESERVE_RUB:-50}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-8192}
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      database:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   parser:
     image: alpha-news-backend:local
     profiles: ["ingest"]

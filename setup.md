@@ -1,6 +1,6 @@
 # Установка, запуск и тестирование
 
-[Обзор проекта](readme.md) · [API](readme.md#api) · [PyCharm](#запуск-в-pycharm) · [PostgreSQL](#5-postgresql)
+[Обзор проекта](README.md) · [API](README.md#api) · [PyCharm](#запуск-в-pycharm) · [PostgreSQL](#5-postgresql)
 
 ## Выбрать режим
 
@@ -16,7 +16,7 @@
 |---|---|
 | Python | **3.12** |
 | PostgreSQL | **17.x** |
-| Node.js | **22.12+**, npm из комплекта |
+| Node.js | **22.12.0** из `frontend/.nvmrc`; совместимы версии **22.12+** |
 | Git | Для клонирования |
 | Docker + Compose | Если запускаем PostgreSQL в контейнере |
 
@@ -25,7 +25,7 @@ git clone https://github.com/Mishgite/Alpha_Hack_News_Analytics.git
 cd Alpha_Hack_News_Analytics
 ```
 
-Команды ниже выполняются **из корня репозитория**, если рядом не указана другая папка.
+Команды ниже выполняются **из корня репозитория**, если рядом не указана другая папка. Python lock-файл `backend/app/requirements.lock` фиксирует транзитивные зависимости и хэши; корневой `requirements.txt` устанавливает его.
 
 ## 2. Быстрый просмотр интерфейса
 
@@ -55,7 +55,12 @@ py -3.12 -m venv backend/app/.venv
 python -m pip install -r requirements.txt
 ```
 
-Если PowerShell блокирует активацию, можно выполнять команды через `.\backend\app\.venv\Scripts\python.exe`. Корневой `requirements.txt` подключает закреплённые версии из `backend/app/requirements.txt`.
+Если PowerShell блокирует активацию, можно выполнять команды через Python по пути `backend/app/.venv/Scripts/python.exe`. Для обновления lock-файла после изменения `backend/app/requirements.txt` установите `pip-tools` и выполните из корня:
+
+```bash
+python -m pip install pip-tools
+pip-compile --generate-hashes --resolver=backtracking --output-file=backend/app/requirements.lock backend/app/requirements.txt
+```
 
 ## 4. Конфигурация
 
@@ -96,13 +101,17 @@ Copy-Item frontend/.env.example frontend/.env.local
 ### Вариант A — Docker
 
 ```bash
-cp docker/.env.example docker/.env
+[ -f docker/.env ] || cp docker/.env.example docker/.env
 docker compose --env-file docker/.env -f docker/compose.yaml up --build -d
 docker compose --env-file docker/.env -f docker/compose.yaml ps -a
 docker compose --env-file docker/.env -f docker/compose.yaml logs init-db
 ```
 
-В PowerShell вместо `cp` можно использовать `Copy-Item`. Ожидаем: `database` здоров, `init-db` завершился с кодом `0`, в логах — `Reaction trigger: OK` и `OK`.
+Не перезаписывайте существующий `docker/.env`. В PowerShell создание только при отсутствии файла: `if (-not (Test-Path docker/.env)) { Copy-Item docker/.env.example docker/.env }`.
+
+Compose запускает PostgreSQL, инициализацию схемы, API и frontend. Ожидаем: `database`, `api` и `frontend` здоровы, `init-db` завершился с кодом `0`; в логах `init-db` есть `Reaction trigger: OK` и `OK`. Приложение открывается на `http://127.0.0.1:5173`, Swagger — `http://127.0.0.1:8000/docs`.
+
+Worker по умолчанию не запускается. Для свежих новостей и AI-разборов настройте LLM-параметры в `docker/.env`, согласуйте бюджет и включите профиль по [инструкции Docker](docker/README.md). Worker может расходовать бюджет в фоне.
 
 При стандартном `docker/.env` подключение для локального API:
 
@@ -110,7 +119,7 @@ docker compose --env-file docker/.env -f docker/compose.yaml logs init-db
 DATABASE_URL=postgresql+psycopg://postgres:alfa_local_dev@127.0.0.1:5433/alfa_news
 ```
 
-Compose запускает **БД и инициализацию схемы**. API, frontend и worker запускаются отдельно. Порт контейнерной БД с компьютера — **5433**; внутри Docker — `database:5432`.
+Порт контейнерной БД с компьютера — **5433**; внутри Docker — `database:5432`. При необходимости подключить API, запущенный вне Compose, используйте приведённый `DATABASE_URL`.
 
 ### Вариант B — установленный PostgreSQL
 
@@ -167,15 +176,9 @@ python backend/app/import_reports.py
 
 Даты новостей сохраняются исходными: если лента пустая, расширить период через **«Фильтр»**. Без материалов банка разбор новости возможен, но подтверждённой позиции банка в нём может не быть.
 
-### PDF / OCR / XLSX — при необходимости
+### PDF / OCR / XLSX
 
-Для локального чтения PDF и XLSX установить дополнительные зависимости в Python-окружение проекта:
-
-```bash
-python -m pip install pymupdf openpyxl
-```
-
-Для OCR сканов нужен Tesseract с русским и английским языками. В Docker-образе уже есть PyMuPDF и Tesseract. `import_reports.py` читает готовые JSON; исходные PDF/CSV обрабатывает отдельный [парсер](backend/app/newspaper_parser/newspaper_parser.py).
+PyMuPDF и openpyxl входят в Python lock. Для OCR сканов локально нужен Tesseract с русским и английским языками; в Docker-образе эти языки уже установлены. `import_reports.py` читает готовые JSON; исходные PDF/CSV/XLSX обрабатывает отдельный [парсер](backend/app/newspaper_parser/newspaper_parser.py).
 
 Чтобы импортировать исходные материалы в Docker, положить их в `backend/app/newspaper_parser/data/` и выполнить:
 
@@ -183,7 +186,7 @@ python -m pip install pymupdf openpyxl
 docker compose --env-file docker/.env --profile ingest -f docker/compose.yaml run --build --rm parser python -m app.newspaper_parser.newspaper_parser --keep-files
 ```
 
-`--keep-files` сохраняет входные файлы после импорта. Для XLSX в контейнер также потребуется добавить `openpyxl`.
+`--keep-files` сохраняет входные файлы после импорта.
 
 ## 7. Запуск сервисов
 
@@ -202,6 +205,8 @@ docker compose --env-file docker/.env --profile ingest -f docker/compose.yaml ru
 | http://127.0.0.1:8000/docs | Swagger с API и схемами |
 
 Без worker работают сохранённые данные. Новые AI-разборы требуют worker. Уточняющие вопросы к готовому разбору вызывают модель через API и расходуют бюджет даже без worker.
+
+Вместо отдельных процессов можно запустить API и frontend контейнерами по [инструкции Docker](docker/README.md); нативные команды выше остаются альтернативой. В Docker worker включается только профилем `worker`.
 
 На одну БД запускается один worker. Для собственных RSS и интервалов:
 

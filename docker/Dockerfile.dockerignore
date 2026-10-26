@@ -2,6 +2,8 @@
 .idea
 .venv
 **/.venv
+**/node_modules
+**/dist
 **/__pycache__
 **/*.py[cod]
 **/.DS_Store
@@ -9,3 +11,4 @@
 **/.env.*
 !**/.env.example
 backend/app/newspaper_parser/data/**
+backend/data/**

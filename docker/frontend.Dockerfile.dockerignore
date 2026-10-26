@@ -1,0 +1,13 @@
+.git
+.idea
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/.DS_Store
+**/.venv
+**/__pycache__
+**/*.py[cod]
+backend/data/**
+backend/app/newspaper_parser/data/**
