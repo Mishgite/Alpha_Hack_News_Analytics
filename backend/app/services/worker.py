@@ -64,6 +64,8 @@ class BackgroundWorker:
             else QualityService(uow_factory=self.runtime._uow)
         )
         self.analysis_enabled = True
+        self.tagging_enabled = True
+        self.profiles_enabled = True
         self.fetcher = fetcher
         self.enricher = enricher
         self.worker_id = f"worker-{uuid4()}"
@@ -232,8 +234,8 @@ class BackgroundWorker:
             )
             return result
         else:
-            logger.warning(
-                "Prepared reports not found; analysis will report missing bank evidence"
+            logger.info(
+                "No report directory; using documents already stored in database"
             )
 
     async def refresh_market(self):
@@ -361,10 +363,25 @@ class BackgroundWorker:
         except ValueError:
             self.analysis_enabled = False
             logger.warning("LLM analysis is not configured")
+        for field, model in (
+            ("tagging_enabled", "LLM_MODEL_TAGGING"),
+            ("profiles_enabled", "LLM_MODEL_CONTEXT"),
+        ):
+            try:
+                validate_configuration(config, model)
+            except ValueError:
+                setattr(self, field, False)
+                logger.warning(
+                    "%s is not configured; saved features remain available", model
+                )
         reports_ok = await self._call("reports", self.import_reports)
         await self.heartbeat()
         if once:
-            success = await self._call("profiles", self.process_profiles) and reports_ok
+            success = reports_ok
+            if self.profiles_enabled:
+                success = (
+                    await self._call("profiles", self.process_profiles) and success
+                )
             if self.settings.market_enabled:
                 success = await self._call("market", self.refresh_market) and success
             for source in self.settings.sources:
@@ -373,7 +390,7 @@ class BackgroundWorker:
                 success = (
                     await self._call(source.code, self.fetch_source, source) and success
                 )
-            if not self.stop_event.is_set():
+            if not self.stop_event.is_set() and self.tagging_enabled:
                 success = await self._call("tagging", self.tag_news) and success
             if not self.stop_event.is_set():
                 success = (
@@ -385,11 +402,14 @@ class BackgroundWorker:
             tasks.create_task(self._repeat("heartbeat", 15, self.heartbeat))
             tasks.create_task(self._repeat("monitoring", 60, self.monitor))
             tasks.create_task(self._repeat("quality", 3600, self.check_quality))
-            tasks.create_task(
-                self._repeat(
-                    "profiles", self.settings.profile_interval, self.process_profiles
+            if self.profiles_enabled:
+                tasks.create_task(
+                    self._repeat(
+                        "profiles",
+                        self.settings.profile_interval,
+                        self.process_profiles,
+                    )
                 )
-            )
             if self.settings.market_enabled:
                 tasks.create_task(
                     self._repeat(
@@ -405,9 +425,12 @@ class BackgroundWorker:
                         source,
                     )
                 )
-            tasks.create_task(
-                self._repeat("tagging", self.settings.tagging_interval, self.tag_news)
-            )
+            if self.tagging_enabled:
+                tasks.create_task(
+                    self._repeat(
+                        "tagging", self.settings.tagging_interval, self.tag_news
+                    )
+                )
             if self.analysis_enabled:
                 tasks.create_task(
                     self._repeat(

@@ -10,6 +10,8 @@
 | **API + БД** | Python, PostgreSQL, Node.js | Профили, теги, сохранённые новости, лента и реакции |
 | **Полный** | Всё выше + ключ LLM + worker | Свежие новости, разметка, AI-разборы и уточнения |
 
+Для запуска без локальных зависимостей и своих датасетов: **[Docker с готовыми данными](docker/README.md)**. Следующие разделы описывают также ручной запуск для разработки
+
 ## 1. Требования и клонирование
 
 | Инструмент | Версия |
@@ -95,22 +97,15 @@ Copy-Item frontend/.env.example frontend/.env.local
 
 ### Вариант A — Docker
 
+[Полная инструкция](docker/README.md). Из корня репозитория:
+
 ```bash
-cp docker/.env.example docker/.env
-docker compose --env-file docker/.env -f docker/compose.yaml up --build -d
-docker compose --env-file docker/.env -f docker/compose.yaml ps -a
-docker compose --env-file docker/.env -f docker/compose.yaml logs init-db
+docker compose -f docker/compose.yaml up --build -d
 ```
 
-В PowerShell вместо `cp` можно использовать `Copy-Item`. Ожидаем: `database` здоров, `init-db` завершился с кодом `0`, в логах — `Reaction trigger: OK` и `OK`.
+Открыть **http://127.0.0.1:5173**. Compose запускает PostgreSQL, импорт, API, worker и frontend. Автоматически загружаются 50 обезличенных компаний из текущей выборки, 104 реальные новости с признаками и фрагменты девяти отчётов
 
-При стандартном `docker/.env` подключение для локального API:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg://postgres:alfa_local_dev@127.0.0.1:5433/alfa_news
-```
-
-Compose запускает **БД и инициализацию схемы**. API, frontend и worker запускаются отдельно. Порт контейнерной БД с компьютера — **5433**; внутри Docker — `database:5432`.
+Установка Python, Node.js и PostgreSQL на хосте, ручной импорт и отдельный запуск процессов из следующих разделов для этого варианта не нужны. Ключ модели требуется только для новых AI-запросов и разметки новых публикаций
 
 ### Вариант B — установленный PostgreSQL
 

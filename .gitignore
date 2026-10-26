@@ -33,4 +33,6 @@ backend/app/newspaper_parser/data/
 !/backend/data/**/
 !/backend/data/**/.gitkeep
 !/backend/data/examples/recent-news-2026-10-25.json
+!/backend/data/examples/demo-companies.json
+!/backend/data/examples/demo-report-excerpts.json
 /backend/data/submission/

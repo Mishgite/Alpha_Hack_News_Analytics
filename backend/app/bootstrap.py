@@ -210,7 +210,15 @@ def bootstrap():
 def main():
     """завершает запуск с ошибкой, если данные не удалось подготовить полностью"""
     try:
-        bootstrap()
+        mode = os.environ.get("BOOTSTRAP_MODE", "full")
+        if mode == "demo":
+            from app.seed_demo import seed_demo
+
+            seed_demo()
+        elif mode == "full":
+            bootstrap()
+        else:
+            raise ValueError("BOOTSTRAP_MODE must be demo or full")
         return 0
     except (OSError, ValueError) as error:
         print(f"Bootstrap stopped: {error}", file=sys.stderr)

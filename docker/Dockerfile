@@ -20,6 +20,11 @@ RUN python -m pip install --no-cache-dir \
     pymupdf
 
 COPY backend/app /workspace/backend/app
+COPY backend/data/examples/recent-news-2026-10-25.json /workspace/backend/data/examples/
+COPY backend/data/examples/demo-companies.json /workspace/backend/data/examples/
+COPY backend/data/examples/demo-report-excerpts.json /workspace/backend/data/examples/
+COPY docker/worker.json /workspace/worker.json
 
 WORKDIR /workspace/backend
-CMD ["python", "-m", "app.infrastructure.database.init_db"]
+ENTRYPOINT ["python", "-m", "app.container"]
+CMD ["api"]

@@ -30,6 +30,31 @@ class NewsRepository:
         """внедрение зависимостей (Dependency Injection): получает готовую сессию от UnitOfWork"""
         self._session = session
 
+    def contains_publication(self, source, external_id, url):
+        """проверяет основные и дополнительные ссылки, чтобы импорт примеров не заменял рабочие новости"""
+        keys = []
+        if url:
+            keys.append(NewsAttribution.url == url)
+        if external_id:
+            keys.append(
+                (NewsAttribution.source_code == source)
+                & (NewsAttribution.external_id == external_id)
+            )
+        if keys and self._session.scalar(
+            select(NewsAttribution.id).where(or_(*keys)).limit(1)
+        ):
+            return True
+        keys = []
+        if url:
+            keys.append(News.canonical_url == url)
+        if external_id:
+            keys.append(
+                (News.source_code == source) & (News.external_id == external_id)
+            )
+        return bool(
+            keys and self._session.scalar(select(News.id).where(or_(*keys)).limit(1))
+        )
+
     def save_news(
         self,
         *,

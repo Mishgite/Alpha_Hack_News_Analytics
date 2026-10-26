@@ -1,0 +1,1600 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "company": {
+        "id": "U_106783",
+        "profile_version": "public-demo-v1:f3fe924b43f9d0185702633ea264b2ad5c4cf9d631ba1543ddd55f600c8b8089",
+        "okved_code": "27.12",
+        "okved_name": "Производство электрической распределительной и регулирующей аппаратуры",
+        "industry": "Производство электрической распределительной и регулирующей аппаратуры",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_elec",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_10893",
+        "profile_version": "public-demo-v1:7452581891d727014da0e2a5f9e63cf930573cb63237251d46f7e863bacb0342",
+        "okved_code": "42.12",
+        "okved_name": "Строительство железных дорог и метро",
+        "industry": "Строительство железных дорог и метро",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_railprod",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_employment",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_11496",
+        "profile_version": "public-demo-v1:b2c920c064c7dfdf12f176f2ff9881c9926dd85ce29551d4fad561346ec7dfc7",
+        "okved_code": "52.29",
+        "okved_name": "Деятельность вспомогательная прочая, связанная с перевозками",
+        "industry": "Деятельность вспомогательная прочая, связанная с перевозками",
+        "city": "г. Санкт-Петербург",
+        "region": "Санкт-Петербург",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_logistic",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_customs",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_115460",
+        "profile_version": "public-demo-v1:46bb2b430ae4aa7a2fd23c40bdbe1cd6dab05d218e41551e50a4bc24604e133b",
+        "okved_code": "45.20.1",
+        "okved_name": "Техническое обслуживание и ремонт легковых автомобилей и легких грузовых автотранспортных средств",
+        "industry": "Техническое обслуживание и ремонт легковых автомобилей и легких грузовых автотранспортных средств",
+        "city": "г. Санкт-Петербург",
+        "region": "Санкт-Петербург",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_carservice",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_12750",
+        "profile_version": "public-demo-v1:3dcc70c059b5e1b7134a4d3733b4a7b7abeb913a5574f8515e49f96ad2d07a47",
+        "okved_code": "46.21",
+        "okved_name": "Торговля оптовая зерном, необработанным табаком, семенами и кормами для сельскохозяйственных животных",
+        "industry": "Торговля оптовая зерном, необработанным табаком, семенами и кормами для сельскохозяйственных животных",
+        "city": "г. Оренбург",
+        "region": "Оренбургская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_seed",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_agr",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_136248",
+        "profile_version": "public-demo-v1:28ac2929d08a4616eba8b88b5bb6525416f19281cb1d2636f4eb13ffeeed0e1f",
+        "okved_code": "42.21",
+        "okved_name": "Строительство инженерных коммуникаций для водоснабжения и водоотведения, газоснабжения",
+        "industry": "Строительство инженерных коммуникаций для водоснабжения и водоотведения, газоснабжения",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_water",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_gas",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_14366",
+        "profile_version": "public-demo-v1:7a8327fa0318ba9c18ef0fd25a5bc5c368f7914d8903c52ca04dd854f78e09cc",
+        "okved_code": "64.91.2",
+        "okved_name": "Деятельность по финансовой аренде (лизингу/сублизингу) в прочих областях, кроме племенных животных",
+        "industry": "Деятельность по финансовой аренде (лизингу/сублизингу) в прочих областях, кроме племенных животных",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_credit",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_invest",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_150736",
+        "profile_version": "public-demo-v1:a62bf3457067a498a306d0c9adc84976385e45db3a6569a08a6cf27617976723",
+        "okved_code": "17.21",
+        "okved_name": "Производство гофрированной бумаги и картона, бумажной и картонной тары",
+        "industry": "Производство гофрированной бумаги и картона, бумажной и картонной тары",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_paper",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_pack",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_15728",
+        "profile_version": "public-demo-v1:3b3161a889d00c0e8180fdf1c525e90c185223c92ce164c6697194c441eb8b00",
+        "okved_code": "52.29",
+        "okved_name": "Деятельность вспомогательная прочая, связанная с перевозками",
+        "industry": "Деятельность вспомогательная прочая, связанная с перевозками",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_logistic",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_freight",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_1595",
+        "profile_version": "public-demo-v1:cd17f8f5a418a20a20bbd07bafb4b9cf131bd2cad582a71687d13a5d393f5a9a",
+        "okved_code": "47.71",
+        "okved_name": "Торговля розничная одеждой в специализированных магазинах",
+        "industry": "Торговля розничная одеждой в специализированных магазинах",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_retail",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_textile",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_170906",
+        "profile_version": "public-demo-v1:2a502cb0a1e6e0dbe67683cf53e31c6b1625179f99b183257c6ff4d2eae2a0c3",
+        "okved_code": "71.12.2",
+        "okved_name": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "industry": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_lead",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_arch",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_175851",
+        "profile_version": "public-demo-v1:d5d98808de9977c1691f0923919372814454199da9ea827312a2cd293cfa955a",
+        "okved_code": "71.12.2",
+        "okved_name": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "industry": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_arch",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_18482",
+        "profile_version": "public-demo-v1:399923b828ebacadfdd534df2c8ce75b1a3406d6a8c029a595d24c365371ce9d",
+        "okved_code": "45.19.1",
+        "okved_name": "Торговля оптовая прочими автотранспортными средствами",
+        "industry": "Торговля оптовая прочими автотранспортными средствами",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_freight",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_retail",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_184851",
+        "profile_version": "public-demo-v1:9529898639e41bc42a66d972078f23c91af0b360b3ef13a0b2edcd8302ea2aa2",
+        "okved_code": "41.20.9",
+        "okved_name": "Прочие виды строительства жилых и нежилых зданий",
+        "industry": "Прочие виды строительства жилых и нежилых зданий",
+        "city": "г. Екатеринбург",
+        "region": "Свердловская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_housing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_190452",
+        "profile_version": "public-demo-v1:d771964a212e6193569b865554de5f0695fb0eb112a2b5cd90f3170f253b3466",
+        "okved_code": "35.11.1",
+        "okved_name": "Производство электроэнергии тепловыми электростанциями, в том числе деятельность по обеспечению работоспособности электростанций",
+        "industry": "Производство электроэнергии тепловыми электростанциями, в том числе деятельность по обеспечению работоспособности электростанций",
+        "city": "г. Хабаровск",
+        "region": "Хабаровский край",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_energy",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_191099",
+        "profile_version": "public-demo-v1:3563c08a4bce44c584fd47cf0c6888c295b0bcd12ad0f6eea2a2f3548d973dfa",
+        "okved_code": "42.11",
+        "okved_name": "Строительство автомобильных дорог и автомагистралей",
+        "industry": "Строительство автомобильных дорог и автомагистралей",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_roads",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_19717",
+        "profile_version": "public-demo-v1:ed230d0c6aff360a8a3b9d24fd653dbc1886745936783d34a78b3bafae5dafa7",
+        "okved_code": "47.30",
+        "okved_name": "Торговля розничная моторным топливом в специализированных магазинах",
+        "industry": "Торговля розничная моторным топливом в специализированных магазинах",
+        "city": "г. Новосибирск",
+        "region": "Новосибирская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_retail",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_200890",
+        "profile_version": "public-demo-v1:5bebe8f8f3166c5649dac60a86a7d5d0c36a8c9b5529780b29728f571daabb8b",
+        "okved_code": "46.72",
+        "okved_name": "Торговля оптовая металлами и металлическими рудами",
+        "industry": "Торговля оптовая металлами и металлическими рудами",
+        "city": "г. Челябинск",
+        "region": "Челябинская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_metal",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_202619",
+        "profile_version": "public-demo-v1:8ba0f04789ad63c1d0b72c1e947c2e835515f25f9b94484440c464b91bcbb21e",
+        "okved_code": "33.12",
+        "okved_name": "Ремонт машин и оборудования",
+        "industry": "Ремонт машин и оборудования",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_carservice",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_mach",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_212593",
+        "profile_version": "public-demo-v1:512bff9337056bbe4e8efec13225e9bea8d89a34867a850560abee619cf05075",
+        "okved_code": "56.10.1",
+        "okved_name": "Деятельность ресторанов и кафе с полным ресторанным обслуживанием, кафетериев, ресторанов быстрого питания и самообслуживания",
+        "industry": "Деятельность ресторанов и кафе с полным ресторанным обслуживанием, кафетериев, ресторанов быстрого питания и самообслуживания",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_catering",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_2222",
+        "profile_version": "public-demo-v1:88b6b811dc94fa7496496898f3286d89126c508e0a8079f8c74b1e3155ab59e5",
+        "okved_code": "45.31.1",
+        "okved_name": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "industry": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_auto",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_235727",
+        "profile_version": "public-demo-v1:feb00b3ed84b20610332611e689a06e1b8dd71dd3a024fc4c2423d11d4502cf3",
+        "okved_code": "49.4",
+        "okved_name": "Деятельность автомобильного грузового транспорта и услуги по перевозкам",
+        "industry": "Деятельность автомобильного грузового транспорта и услуги по перевозкам",
+        "city": "г. Ульяновск",
+        "region": "Ульяновская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_freight",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_logistic",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_25835",
+        "profile_version": "public-demo-v1:7252313e9ffd5611c917cbab3ac7332ffeb2e1cf5f84ff77d23eacc5d39049f5",
+        "okved_code": "45.31.1",
+        "okved_name": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "industry": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_carservice",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_26030",
+        "profile_version": "public-demo-v1:0f7f92a4f3230d6124ac4bfeac9e110d628fb2667a1a47bc3e780d0178eb79dc",
+        "okved_code": "46.71.2",
+        "okved_name": "Торговля оптовая моторным топливом, включая авиационный бензин",
+        "industry": "Торговля оптовая моторным топливом, включая авиационный бензин",
+        "city": "г. Уфа",
+        "region": "Башкортостан (Республика)",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_276153",
+        "profile_version": "public-demo-v1:dfaa57b64a25a96415abb88aa9bc2105f52e0c6af76539276f5fbf050ac5db2d",
+        "okved_code": "71.12.2",
+        "okved_name": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "industry": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_arch",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_31505",
+        "profile_version": "public-demo-v1:0be34b4f004669c382e2b08424aec3bd2cb9d146e15c593874869ca41a64c98f",
+        "okved_code": "46.71.2",
+        "okved_name": "Торговля оптовая моторным топливом, включая авиационный бензин",
+        "industry": "Торговля оптовая моторным топливом, включая авиационный бензин",
+        "city": "г. Омск",
+        "region": "Омская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_freight",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_sme",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_3263",
+        "profile_version": "public-demo-v1:31fc10bf838c57e011648dfa9d51eedd0f4cce00cd5324b5bb21ffaf03a90939",
+        "okved_code": "49.41.2",
+        "okved_name": "Перевозка грузов неспециализированными автотранспортными средствами",
+        "industry": "Перевозка грузов неспециализированными автотранспортными средствами",
+        "city": "г. Набережные Челны",
+        "region": "Республика Татарстан",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_freight",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_logistic",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_export",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_339170",
+        "profile_version": "public-demo-v1:cd0287feeeea7039e5e77d7819e0f600b59872d186e95f517c2707eab359b3ec",
+        "okved_code": "64.20",
+        "okved_name": "Деятельность холдинговых компаний",
+        "industry": "Деятельность холдинговых компаний",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_invest",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_govern",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_3642",
+        "profile_version": "public-demo-v1:8195e7a6a23c78a9fe0ec5a090b45f2ff67f64f0ee059825806d0d3fa732834e",
+        "okved_code": "68.3",
+        "okved_name": "Операции с недвижимым имуществом за вознаграждение или на договорной основе",
+        "industry": "Операции с недвижимым имуществом за вознаграждение или на договорной основе",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_comreal",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_399189",
+        "profile_version": "public-demo-v1:05e7742e7dce3b02a4ca46ecd3e321b413af540d411fc386a4b792d55d1399b8",
+        "okved_code": "64.99",
+        "okved_name": "Предоставление прочих финансовых услуг, кроме услуг по страхованию и пенсионному обеспечению, не включенных в другие группировки",
+        "industry": "Предоставление прочих финансовых услуг, кроме услуг по страхованию и пенсионному обеспечению, не включенных в другие группировки",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_invest",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_401523",
+        "profile_version": "public-demo-v1:c1b5fdadb64ecff5adeaeb842faac8968652f3288b72bdd6db44c72193510622",
+        "okved_code": "64.99",
+        "okved_name": "Предоставление прочих финансовых услуг, кроме услуг по страхованию и пенсионному обеспечению, не включенных в другие группировки",
+        "industry": "Предоставление прочих финансовых услуг, кроме услуг по страхованию и пенсионному обеспечению, не включенных в другие группировки",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_invest",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_44245",
+        "profile_version": "public-demo-v1:51cdfe9ebaae088692527b92b9f24967c40131129c54f8cd8f96aecb1a7e347b",
+        "okved_code": "45.11.2",
+        "okved_name": "Торговля розничная легковыми автомобилями и легкими автотранспортными средствами в специализированных магазинах",
+        "industry": "Торговля розничная легковыми автомобилями и легкими автотранспортными средствами в специализированных магазинах",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_retail",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_carservice",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_sales",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_44792",
+        "profile_version": "public-demo-v1:3984beda3ed81001417eabd662d1310805411f55638a352b3adf3a320fc9fb5f",
+        "okved_code": "62.01",
+        "okved_name": "Разработка компьютерного программного обеспечения",
+        "industry": "Разработка компьютерного программного обеспечения",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_software",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_it",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_4909",
+        "profile_version": "public-demo-v1:104a6da25b3e99961c89427fffc911275efbc321b40b818e42c15acbb9780d1c",
+        "okved_code": "35.11.1",
+        "okved_name": "Производство электроэнергии тепловыми электростанциями, в том числе деятельность по обеспечению работоспособности электростанций",
+        "industry": "Производство электроэнергии тепловыми электростанциями, в том числе деятельность по обеспечению работоспособности электростанций",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_energy",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_49201",
+        "profile_version": "public-demo-v1:dbeb7ae15a5e92db30aca113e32639706da9b5619000719dc942f5ecee9c4db1",
+        "okved_code": "73.11.9",
+        "okved_name": "Деятельность рекламных агентств прочая",
+        "industry": "Деятельность рекламных агентств прочая",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_marketing",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_51606",
+        "profile_version": "public-demo-v1:029c0d01cd39c2e965298ea420a8eb67d703fc85460457de5eb7269f604b596a",
+        "okved_code": "41.20.9",
+        "okved_name": "Прочие виды строительства жилых и нежилых зданий",
+        "industry": "Прочие виды строительства жилых и нежилых зданий",
+        "city": "г. Казань",
+        "region": "Республика Татарстан",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_housing",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_5639",
+        "profile_version": "public-demo-v1:b157b9ab4ab8351768a445ae490f7cdd9bfdf7537a3d8c3d5e4a6df29459d09d",
+        "okved_code": "46.90",
+        "okved_name": "Торговля оптовая неспециализированная",
+        "industry": "Торговля оптовая неспециализированная",
+        "city": "г. Горно-Алтайск",
+        "region": "Алтай (Республика)",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_5658",
+        "profile_version": "public-demo-v1:916d9963cd75e139b6addfd34119e50eaafbe05429e46a627bf2a4dcc49d9a1a",
+        "okved_code": "41.20.9",
+        "okved_name": "Прочие виды строительства жилых и нежилых зданий",
+        "industry": "Прочие виды строительства жилых и нежилых зданий",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_housing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_repair",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_57633",
+        "profile_version": "public-demo-v1:f3b1819d4af969cddb6245a6d555ba58b8756bf0a1f2540e84c8703bd4c209fc",
+        "okved_code": "42.11",
+        "okved_name": "Строительство автомобильных дорог и автомагистралей",
+        "industry": "Строительство автомобильных дорог и автомагистралей",
+        "city": "г. Челябинск",
+        "region": "Челябинская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_roads",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_leasing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_bank",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_63139",
+        "profile_version": "public-demo-v1:3bef3f8ea31f2c753b76436ff211f7e8cc152095272b67f7a49438364bb31ee5",
+        "okved_code": "71.12.2",
+        "okved_name": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "industry": "Деятельность заказчика-застройщика, генерального подрядчика",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_arch",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_6394",
+        "profile_version": "public-demo-v1:513e01229b18af456281c1e6f2a23b2a873e7e529b6ceee0b5f8a55ccb7ab1e4",
+        "okved_code": "73.11.9",
+        "okved_name": "Деятельность рекламных агентств прочая",
+        "industry": "Деятельность рекламных агентств прочая",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_marketing",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_sales",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_lead",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_68157",
+        "profile_version": "public-demo-v1:f70d028974636361cff46d5e5c67f68ff3307a18d6cb35156023bb3ea2e4e5f0",
+        "okved_code": "41.20.9",
+        "okved_name": "Прочие виды строительства жилых и нежилых зданий",
+        "industry": "Прочие виды строительства жилых и нежилых зданий",
+        "city": "г. Вологда",
+        "region": "Вологодская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_housing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_repair",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_8318",
+        "profile_version": "public-demo-v1:b70b651b15c0be5a0f1b2b2b0194f84fe62b0491ba3034e62558c5fbed143cf2",
+        "okved_code": "45.31.1",
+        "okved_name": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "industry": "Торговля оптовая автомобильными деталями, узлами и принадлежностями, кроме деятельности агентов",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_wholesale",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_carservice",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_logistic",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_83932",
+        "profile_version": "public-demo-v1:d35c9cc0bce51f6a890bec45ce396cf2ae6f159e5c27972beaf1241d8c1de7c1",
+        "okved_code": "41.20.1",
+        "okved_name": "Жилищное строительство",
+        "industry": "Жилищное строительство",
+        "city": "г. Санкт-Петербург",
+        "region": "Санкт-Петербург",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_housing",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_86035",
+        "profile_version": "public-demo-v1:4142e4eee629911181c86a0a52fda7aff96ad42b19d9ee5d312d337f1326c795",
+        "okved_code": "80.20",
+        "okved_name": "Деятельность систем обеспечения безопасности",
+        "industry": "Деятельность систем обеспечения безопасности",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_security",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_88715",
+        "profile_version": "public-demo-v1:d5d1e3ebb39bc3f9a807233bb72b49843a15aedf6015f6ede9247a558dc863d0",
+        "okved_code": "27.90",
+        "okved_name": "Производство прочего электрического оборудования",
+        "industry": "Производство прочего электрического оборудования",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_elec",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_9250",
+        "profile_version": "public-demo-v1:3bb661f9830ce5be31446e3f965d285a4c286cfbf89d8c3b1227c53c1c8843af",
+        "okved_code": "42.99",
+        "okved_name": "Строительство прочих инженерных сооружений, не включенных в другие группировки",
+        "industry": "Строительство прочих инженерных сооружений, не включенных в другие группировки",
+        "city": "г. Иркутск",
+        "region": "Иркутская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_import",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_trade",
+          "origin": "rule",
+          "base_weight": 1.0
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_94979",
+        "profile_version": "public-demo-v1:1252c68c5c841e764b55ab1f17aa9483c83fc23f763cdcb5f9fe4e6896db09a9",
+        "okved_code": "41.20.9",
+        "okved_name": "Прочие виды строительства жилых и нежилых зданий",
+        "industry": "Прочие виды строительства жилых и нежилых зданий",
+        "city": "г. Москва",
+        "region": "Москва",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_99262",
+        "profile_version": "public-demo-v1:93be2ab8cb39390201f261276f6d0eb014638fab331f251d295a3f21a9efb7a1",
+        "okved_code": "42.11",
+        "okved_name": "Строительство автомобильных дорог и автомагистралей",
+        "industry": "Строительство автомобильных дорог и автомагистралей",
+        "city": "г. Сургут",
+        "region": "Тюменская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_roads",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_construct",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_infra",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    },
+    {
+      "company": {
+        "id": "U_99802",
+        "profile_version": "public-demo-v1:3fe4ce8e581ec55aad1ffa320cf78050bc5fa0477767eea0f6763c9140156d52",
+        "okved_code": "68.20.2",
+        "okved_name": "Аренда и управление собственным или арендованным нежилым недвижимым имуществом",
+        "industry": "Аренда и управление собственным или арендованным нежилым недвижимым имуществом",
+        "city": "г. Фрязино",
+        "region": "Московская область",
+        "profile_json": {
+          "demo_export": true,
+          "revenue_band": "over_15_billion_rub"
+        },
+        "known_factor_interests": []
+      },
+      "tags": [
+        {
+          "tag_id": "biz_rent",
+          "origin": "rule",
+          "base_weight": 1.5
+        },
+        {
+          "tag_id": "biz_comreal",
+          "origin": "rule",
+          "base_weight": 1.0
+        },
+        {
+          "tag_id": "biz_realty",
+          "origin": "rule",
+          "base_weight": 1.5
+        }
+      ]
+    }
+  ]
+}

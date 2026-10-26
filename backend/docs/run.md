@@ -195,161 +195,15 @@ Workflow публикует только `frontend/dist`. Все `VITE_*` пуб
 
 ## Сервер: Docker и отдельный фронтенд
 
-### 1. Подготовка сервера
+[Инструкция Docker](../../docker/README.md): запуск чистого клона, автоматическая загрузка 50 компаний и 104 новостей, подключение модели, HTTPS и отдельный фронтенд
 
-Linux, Docker Engine и плагин Docker Compose v2: [установка Docker](https://docs.docker.com/engine/install/). Python и PostgreSQL на хосте не требуются
-
-```bash
-git clone https://github.com/Mishgite/Alpha_Hack_News_Analytics.git
-cd Alpha_Hack_News_Analytics
-cp docker/.env.example docker/.env
-```
-
-Использовать ветку с актуальной серверной конфигурацией. Все команды ниже выполняются из корня репозитория
-
-### 2. Передача исходных данных
-
-Эти файлы передаются отдельно от Git. На сервере нужна структура:
-
-```text
-backend/data/
-  companies/
-    df_Uid_data_hack.csv
-    df_Fid_Uid_link_hack.csv
-    df_Uid_payment_hack.csv
-    selection.txt
-  reports/
-    *.pdf
-  reports_processed/
-    <папка каждого отчёта>/
-      manifest.json
-      page_*.json
-```
-
-`selection.txt` содержит ровно 50 ID из нашей выборки, по одному на строке. Нужны все 9 исходных PDF и JSON подготовки каждого отчёта с сохранением имён файлов и папок. PNG, TSV, TXT и исследовательские файлы для запуска не требуются
-
-Архив на рабочем компьютере, из корня проекта в PowerShell:
-
-```powershell
-tar -czf "$env:USERPROFILE/Desktop/alfa-server-data.tar.gz" --exclude="*.png" --exclude="*.tsv" --exclude="*.txt" --exclude="*.md" -C backend/data reports reports_processed
-```
-
-Передать архив, три CSV и список ID компаний через SFTP/SCP. На сервере:
+Из корня проекта:
 
 ```bash
-mkdir -p backend/data/companies
-tar -xzf /path/to/alfa-server-data.tar.gz -C backend/data
-cp /path/to/df_Uid_data_hack.csv backend/data/companies/
-cp /path/to/df_Fid_Uid_link_hack.csv backend/data/companies/
-cp /path/to/df_Uid_payment_hack.csv backend/data/companies/
-cp /path/to/selection.txt backend/data/companies/
-chmod -R a+rX backend/data/companies backend/data/reports backend/data/reports_processed
+docker compose -f docker/compose.yaml up --build -d
 ```
 
-Путь `/path/to/` заменить папкой загрузки. Контейнер работает от UID 10001, поэтому входные файлы должны быть доступны ему для чтения
-
-Новости с готовой разметкой уже включены в образ из `backend/data/examples/recent-news-2026-10-25.json`. Это сохранённые реальные новости с исходными датами, а не постоянно свежая лента. Новые новости собирает воркер
-
-### 3. Настройки
-
-В `docker/.env`:
-
-- `POSTGRES_PASSWORD`: отдельный пароль контейнерной БД, в одинарных кавычках; URL-кодирование не требуется
-- `LLM_API_KEY`: ключ команды, только на сервере
-- `DATA_DIRECTORY=../backend/data`: путь относительно папки `docker`; можно заменить абсолютным серверным путём
-- `FRONTEND_ORIGIN`: адрес фронта без пути, например `https://team.github.io`, а не `https://team.github.io/repository`
-- `API_DOMAIN`: будущий домен API без протокола и пути, например `api.example.ru`
-- `API_PORT=8000`: локальный порт API на сервере; наружу публикуется через HTTPS-прокси
-- `LLM_DAILY_REQUEST_LIMIT=100`: общий лимит попыток API, импорта и воркера в этой БД
-- `LLM_BUDGET_RESERVE_RUB=360`: остановка новых запросов при остатке 360 ₽; при бюджете 500 ₽ доступно около 140 ₽ с небольшим возможным превышением на последний запрос. Для обычной работы после проверок резерв можно изменить осознанно
-
-Другие значения оставить из примера. Первый импорт получает признаки 50 компаний через модель и входит в эти лимиты. Если один ключ используется ещё на ноутбуке, расходы по ключу общие, а счётчики числа попыток в разных БД отдельные
-
-```bash
-chmod 600 docker/.env
-docker compose --env-file docker/.env -f docker/compose.yaml config --quiet
-```
-
-`backend/app/.env` внутри образа отсутствует. Серверные настройки берутся только из `docker/.env`. Команда `config` без `--quiet` может вывести секреты
-
-### 4. Первый запуск без публичного домена
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml up --build -d
-docker compose --env-file docker/.env -f docker/compose.yaml logs -f bootstrap
-```
-
-Порядок: готовность PostgreSQL → создание схемы и тегов → проверка CSV, JSON и контрольных сумм PDF → отчёты и новости → 50 компаний и их признаки → API и воркер
-
-Ожидается `Bootstrap complete: 50 companies, 104 news, 9 reports`. После этого `bootstrap` имеет состояние `Exited (0)`, остальные сервисы должны стать `healthy`:
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml ps -a
-curl --fail http://127.0.0.1:8000/health
-```
-
-Выход из просмотра логов: Ctrl+C. Если импорт завершился ошибкой, исправить её причину и повторить `up -d`. Уже успешно размеченные компании не отправляются модели повторно. Автоповторы временных ошибок шлюза ограничены тремя на компанию; при ошибке данных, ключа или бюджета запуск останавливается
-
-Пока домена нет, API доступен только на самом сервере. Для проверки с компьютера можно открыть SSH-туннель `ssh -L 8000:127.0.0.1:8000 user@server`, установить `FRONTEND_ORIGIN=http://127.0.0.1:5173` и запустить локальный фронт с `VITE_API_URL=http://127.0.0.1:8000`
-
-### 5. HTTPS и размещение фронтенда
-
-1. Создать DNS A-запись домена API на IP сервера; при наличии AAAA-записи IPv6 также должен вести на сервер
-2. Открыть серверные порты 80 и 443; порт PostgreSQL наружу не публикуется
-3. Указать реальные `API_DOMAIN` и `FRONTEND_ORIGIN` в `docker/.env`
-4. Запустить прокси:
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml --profile https up --build -d
-curl --fail https://api.example.ru/health
-```
-
-Caddy получает и продлевает сертификат автоматически при доступном домене и портах; сертификаты сохраняются в отдельном volume. [Требования Caddy к HTTPS](https://caddyserver.com/docs/automatic-https/)
-
-5. В настройках GitHub Actions задать `VITE_API_URL=https://api.example.ru` и выполнить публикацию по разделу «GitHub Pages» выше. Для другого хостинга собрать фронт с этим же значением и разместить `frontend/dist`
-
-Изменение `VITE_API_URL` требует новой сборки фронта. Изменение `docker/.env` требует `up -d`, одного `restart` недостаточно. На публичном фронте нельзя оставлять `127.0.0.1` или HTTP-адрес API
-
-Текущий вход остаётся демонстрационным: пользователь выбирает компанию без банковской авторизации. Сервер рассчитан на показ хакатонного решения, реальные данные клиентов туда не загружаются
-
-### 6. Повторный запуск и обновление
-
-```bash
-git pull
-docker compose --env-file docker/.env -f docker/compose.yaml --profile https up --build -d
-```
-
-Без домена убрать `--profile https`. Если подготовка уже завершена, компании, реакции, новости и разборы сохраняются. Проверяются схема, исходные отчёты и контрольные суммы файлов. При изменении CSV, расшифровок PDF или версии их обработки пересчитываются платёжные признаки и связи выбранных компаний, обновляется индекс PDF. Неизменившаяся разметка сохраняется; эти операции не вызывают модель. Без изменений пересчёт пропускается. Существующая локальная БД Windows автоматически в контейнер не переносится
-
-После перезагрузки сервера существующие контейнеры БД, API, воркера и прокси запускаются автоматически; API и воркер ждут доступности БД. При изменении структуры таблиц неподдерживаемая схема останавливает подготовку, автоматических миграций нет
-
-Данные БД находятся в `alfa-news_postgres-data`, отчёты импорта и общие примеры ошибок разметки в `alfa-news_app-runtime`. Команда `down` сохраняет эти volumes; `down -v` удаляет БД, её нельзя использовать для обычного обновления
-
-Резервная копия БД, из Linux-терминала:
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > alfa-news.dump
-```
-
-Исходные PDF, CSV и JSON сохранять вместе с резервной копией отдельно. Смена `POSTGRES_PASSWORD` в `.env` не меняет пароль уже созданной роли PostgreSQL: сначала изменить пароль роли в БД, затем обновить `.env`
-
-### Воркер и диагностика
-
-Источники и интервалы задаются в `docker/worker.json`; после изменения перезапустить воркер. По умолчанию включены RSS Банка России, экономические рубрики ТАСС и Интерфакса, котировки MOEX. Дополнительные RSS перечисляются в `sources`, формат тот же, что в разделе «Что выполняет воркер»
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml logs --tail 100 bootstrap api worker
-docker compose --env-file docker/.env -f docker/compose.yaml restart worker
-```
-
-Без воркера: `up --build -d api`; если воркер уже запущен, отдельно `stop worker`. Новые разборы и сбор новостей тогда не выполняются. Уточняющие вопросы к готовым разборам остаются платными вызовами API
-
-Дополнительный универсальный парсер не нужен для первоначальной загрузки: подготовленные отчёты уже импортирует `bootstrap`. В Docker он читает папку `reports` и всегда сохраняет оригиналы; OCR-зависимости устанавливаются только в его отдельный образ
-
-```bash
-docker compose --env-file docker/.env -f docker/compose.yaml --profile ingest run --build --rm parser
-```
-
+Исходные CSV, `selection.txt` и подготовленные PDF для этого режима не нужны. Репозиторий содержит компактный набор обезличенных компаний, готовые новости и фрагменты аналитики. Импорт не вызывает модель и не изменяет уже загруженные записи
 
 ## Проверки и обновление контекста
 
@@ -358,17 +212,15 @@ docker compose --env-file docker/.env -f docker/compose.yaml --profile ingest ru
 Из `backend`, с выбранным окружением:
 
 ```powershell
-python app/refresh_company_context.py
 python app/evaluate.py --database
 python app/monitor.py --check
 ```
 
-Первая команда обновляет агрегаты платежей и связей для выбранных 50 компаний. Вторая сохраняет отчёт качества в `data/evaluation`. Третья проверяет текущие предупреждения. Все три команды работают без платных запросов к модели. [Метрики и правила оценки](quality.md)
+Первая команда сохраняет отчёт качества в `data/evaluation`, вторая проверяет текущие предупреждения. Обе работают без платных запросов к модели. Обновление агрегатов через `python app/refresh_company_context.py` нужно только при наличии исходных CSV; для переносимой демовыборки оно не требуется. [Метрики и правила оценки](quality.md)
 
 В Docker, из папки `docker`:
 
 ```bash
-docker compose exec api python -m app.container refresh-context
 docker compose exec api python -m app.container evaluate --database
 docker compose exec api python -m app.container monitor --check
 ```
@@ -376,6 +228,8 @@ docker compose exec api python -m app.container monitor --check
 Отчёты оценки в Docker: `/workspace/runtime/evaluation`, volume `app-runtime`
 
 ## Комплект для сдачи
+
+Для запуска через Docker достаточно клона репозитория. Следующая команда собирает расширенный комплект с локальными исходными материалами; для стандартной демонстрации он не требуется
 
 Из `backend`:
 
