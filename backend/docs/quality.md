@@ -78,6 +78,8 @@ python app/monitor.py --check
 
 ## Контекст компании
 
+[Схема применения формулы при создании ленты](architecture.md#персональная-лента)
+
 ```mermaid
 flowchart LR
   Companies[Компании CSV] --> Context[Локальные агрегаты]
