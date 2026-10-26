@@ -1,130 +1,53 @@
-name: alfa-news
-x-app: &app
-  image: alfa-news-backend:local
-  build: {context: .., dockerfile: docker/Dockerfile}
-  environment:
-    POSTGRES_DB: ${POSTGRES_DB:-alfa_news}
-    POSTGRES_USER: ${POSTGRES_USER:-postgres}
-    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docker/.env}
-    FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://127.0.0.1:5173}
-    API_DEMO_ENABLED: "true"
-    LLM_API_KEY: ${LLM_API_KEY:?Set LLM_API_KEY in docker/.env}
-    LLM_BASE_URL: ${LLM_BASE_URL:-https://changellenge.up.railway.app/v1}
-    LLM_MODEL_TAGGING: ${LLM_MODEL_TAGGING:-qwen/qwen3.6-35b-a3b}
-    LLM_MODEL_CONTEXT: ${LLM_MODEL_CONTEXT:-z-ai/glm-5.3-flash}
-    LLM_MODEL_ANALYSIS: ${LLM_MODEL_ANALYSIS:-z-ai/glm-5.3-flash}
-    LLM_DAILY_REQUEST_LIMIT: ${LLM_DAILY_REQUEST_LIMIT:-100}
-    LLM_BUDGET_RESERVE_RUB: ${LLM_BUDGET_RESERVE_RUB:-360}
-    LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-8192}
-    BAD_NEWS_PATH: /workspace/runtime/bad_news.json
-    IMPORT_OUTPUT_DIR: /workspace/runtime/import_results
-  volumes:
-    - type: bind
-      source: ${DATA_DIRECTORY:-../backend/data}/companies
-      target: /workspace/backend/data/companies
-      read_only: true
-      bind: {create_host_path: false}
-    - type: bind
-      source: ${DATA_DIRECTORY:-../backend/data}/reports
-      target: /workspace/backend/data/reports
-      read_only: true
-      bind: {create_host_path: false}
-    - type: bind
-      source: ${DATA_DIRECTORY:-../backend/data}/reports_processed
-      target: /workspace/backend/data/reports_processed
-      read_only: true
-      bind: {create_host_path: false}
-    - app-runtime:/workspace/runtime
-    - type: bind
-      source: ${WORKER_CONFIG:-./worker.json}
-      target: /workspace/worker.json
-      read_only: true
-      bind: {create_host_path: false}
-  logging:
-    driver: json-file
-    options: {max-size: "10m", max-file: "3"}
-  security_opt: ["no-new-privileges:true"]
-
 services:
   database:
-    image: postgres:17-bookworm
+    image: postgres:17
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-alfa_news}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docker/.env}
-    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 5s
       timeout: 3s
       retries: 20
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options: {max-size: "10m", max-file: "3"}
-
-  bootstrap:
-    <<: *app
-    command: ["bootstrap"]
-    depends_on:
-      database: {condition: service_healthy}
-    restart: "no"
-
-  api:
-    <<: *app
-    command: ["api"]
-    ports: ["127.0.0.1:${API_PORT:-8000}:8000"]
-    depends_on:
-      bootstrap: {condition: service_completed_successfully}
-    healthcheck:
-      test: ["CMD", "python", "-m", "app.container", "health-api"]
-      interval: 20s
-      timeout: 15s
-      retries: 3
-      start_period: 130s
-    stop_grace_period: 5m
+      start_period: 5s
     restart: unless-stopped
 
-  worker:
-    <<: *app
-    command: ["worker"]
-    depends_on:
-      bootstrap: {condition: service_completed_successfully}
-    healthcheck:
-      test: ["CMD", "python", "-m", "app.container", "health-worker"]
-      interval: 20s
-      timeout: 15s
-      retries: 3
-      start_period: 150s
-    stop_grace_period: 16m
-    restart: unless-stopped
-
-  proxy:
-    image: caddy:2-alpine
-    profiles: ["https"]
+  init-db:
+    image: alpha-news-backend:local
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     environment:
-      API_DOMAIN: ${API_DOMAIN:-localhost}
-    ports: ["80:80", "443:443", "443:443/udp"]
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+    command: ["python", "-m", "app.infrastructure.database.init_db"]
     depends_on:
-      api: {condition: service_healthy}
-    restart: unless-stopped
+      database:
+        condition: service_healthy
+    restart: "no"
 
   parser:
-    <<: *app
+    image: alpha-news-backend:local
     profiles: ["ingest"]
-    build: {context: .., dockerfile: docker/Dockerfile, target: parser}
-    image: alfa-news-parser:local
-    command: ["parser", "--directory", "/workspace/backend/data/reports"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-alfa_news}
+    command: ["python", "-m", "app.newspaper_parser.newspaper_parser"]
+    volumes:
+      - ../backend/app/newspaper_parser/data:/workspace/backend/app/newspaper_parser/data
     depends_on:
-      bootstrap: {condition: service_completed_successfully}
-    restart: "no"
+      database:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
 
 volumes:
   postgres-data:
-  app-runtime:
-  caddy-data:
-  caddy-config:

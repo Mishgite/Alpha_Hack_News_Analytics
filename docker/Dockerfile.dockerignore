@@ -6,6 +6,8 @@
 !backend/data/examples/
 !backend/data/examples/recent-news-2026-10-25.json
 **/.venv
+**/node_modules
+**/dist
 **/__pycache__
 **/.pytest_cache
 **/*.py[cod]
@@ -17,3 +19,4 @@
 **/*.lock
 backend/app/main.py
 backend/app/newspaper_parser/data/**
+backend/data/**
