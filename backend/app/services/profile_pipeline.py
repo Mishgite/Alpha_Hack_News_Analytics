@@ -45,13 +45,14 @@ class ProfilePipeline:
             "known_factor_interests",
         }
         data = company.model_dump(mode="json", include=fields, exclude_none=True)
-        from .ai_agents.analysis import PRODUCT_FIELDS
+        from .ai_agents.analysis import CONTEXT_FIELDS, PRODUCT_FIELDS
 
         data.update(
             {
                 key: company.profile_json[key]
                 for key in PRODUCT_FIELDS
-                if company.profile_json.get(key) is not None
+                if key not in CONTEXT_FIELDS
+                and company.profile_json.get(key) is not None
             }
         )
         if job_role is not None:

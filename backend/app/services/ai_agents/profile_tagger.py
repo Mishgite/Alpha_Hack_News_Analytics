@@ -3,7 +3,7 @@
 from app.schemas.tagging import ProfileForTagging, ProfileTags
 from app.services.tag_catalog import load_catalog
 
-from ._common import model_object, validate_features
+from ._common import model_features
 
 
 class ProfileTagger:
@@ -18,7 +18,7 @@ class ProfileTagger:
         """выделяет интересы из деятельности и должности, не угадывает отсутствующие факты"""
         if not isinstance(profile, ProfileForTagging):
             raise TypeError("Expected ProfileForTagging")
-        result = model_object(
+        return model_features(
             "LLM_MODEL_CONTEXT",
             "Выдели темы по описанию деятельности и должности. Не выводи отрасль из названия "
             "компании. city обозначает местонахождение, не весь регион деятельности. "
@@ -29,4 +29,3 @@ class ProfileTagger:
             ProfileTags,
             self.transport,
         )
-        return validate_features(result, self.catalog)

@@ -104,6 +104,10 @@ class FeedService:
             current = build_profile(db.users.get_profile_inputs(user_id), self._policy)
             if current != profile:
                 raise ValueError("Profile changed during ranking; rebuild the feed")
+            # после ранжирования оставляем лучшую для профиля публикацию каждого события
+            result = result.model_copy(
+                update={"items": db.news.unique_events(result.items)}
+            )
             db.news.check_candidates(candidates)
             context = company_context(db, inputs.company)
             snapshot = db.feeds.save(

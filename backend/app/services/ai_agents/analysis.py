@@ -46,6 +46,15 @@ PRODUCT_FIELDS = (
     "FTS_COUNTRY_NAME",
     "AMOUNT_WORKERS_FNS_GRADATION",
     "COMPANY_AGE_YEARS_GRADATION",
+    "industry_position_in_dataset",
+    "market_share_status",
+    "group_companies_in_dataset",
+    "linked_companies_in_dataset",
+    "payment_data_scope",
+    "payment_incoming_counterparties",
+    "payment_outgoing_counterparties",
+    "payment_incoming_largest_share_pct",
+    "payment_outgoing_largest_share_pct",
 )
 FEATURE_LABELS = {
     "okved_code": "ОКВЭД",
@@ -69,13 +78,61 @@ FEATURE_LABELS = {
     "FTS_COUNTRY_NAME": "Страна внешнеторговой деятельности",
     "AMOUNT_WORKERS_FNS_GRADATION": "Численность сотрудников",
     "COMPANY_AGE_YEARS_GRADATION": "Возраст компании",
+    "industry_position_in_dataset": "Сравнение выручки внутри набора данных",
+    "market_share_status": "Доля рынка",
+    "group_companies_in_dataset": "Компании группы в наборе данных",
+    "linked_companies_in_dataset": "Связанные компании в наборе данных",
+    "payment_data_scope": "Ограничения платёжных данных",
+    "payment_incoming_counterparties": "Отправители платежей в выборке",
+    "payment_outgoing_counterparties": "Получатели платежей в выборке",
+    "payment_incoming_largest_share_pct": "Доля крупнейшего отправителя в выборке, %",
+    "payment_outgoing_largest_share_pct": "Доля крупнейшего получателя в выборке, %",
 }
+CONTEXT_FIELDS = (
+    "linked_company_sectors",
+    "linked_company_regions",
+    "group_company_sectors",
+    "group_company_regions",
+    "payment_incoming_sectors",
+    "payment_incoming_regions",
+    "payment_incoming_known_share_pct",
+    "payment_incoming_group_share_pct",
+    "payment_outgoing_sectors",
+    "payment_outgoing_regions",
+    "payment_outgoing_known_share_pct",
+    "payment_outgoing_group_share_pct",
+)
+PRODUCT_FIELDS += CONTEXT_FIELDS
+FEATURE_LABELS.update(
+    {
+        "linked_company_sectors": "Связанные через физлиц компании: ОКВЭД и количество",
+        "linked_company_regions": "Связанные через физлиц компании: регионы и количество",
+        "group_company_sectors": "Компании группы: ОКВЭД и количество",
+        "group_company_regions": "Компании группы: регионы и количество",
+        "payment_incoming_sectors": "Входящие платежи: ОКВЭД контрагентов и доли, %",
+        "payment_incoming_regions": "Входящие платежи: регионы контрагентов и доли, %",
+        "payment_incoming_known_share_pct": "Входящие платежи: доля с известным профилем контрагента, %",
+        "payment_incoming_group_share_pct": "Входящие платежи: доля внутри группы, %",
+        "payment_outgoing_sectors": "Исходящие платежи: ОКВЭД контрагентов и доли, %",
+        "payment_outgoing_regions": "Исходящие платежи: регионы контрагентов и доли, %",
+        "payment_outgoing_known_share_pct": "Исходящие платежи: доля с известным профилем контрагента, %",
+        "payment_outgoing_group_share_pct": "Исходящие платежи: доля внутри группы, %",
+    }
+)
 ANALYSIS_INSTRUCTION = """Подготовь бизнес-разбор только по переданным материалам
 Читатель работает в анализируемой компании, а не продаёт ей банковские продукты
 Рекомендации адресуй самой компании: что проверить в её деятельности, без советов менеджеру банка «уточнить у клиента» или «предложить продукт»
 Отделяй событие, сценарии влияния и позицию банка, не давай торговых приказов
 Для why_important используй конкретные company_feature_refs из company_features
+Сведения о компании подтверждай отрывками kind=company, сведения о событии отрывками kind=news
+Факты в facts должны содержать событие из новости, а не описание компании
+Для связи новости с компанией используй оба источника в evidence_ids
 Регистрация компании не доказывает регион её операций, наличие кредита не доказывает размер долга
+Продуктовый флаг подтверждает только наличие продукта, не активность его использования и не условия договора
+Ставка ЦБ не доказывает изменение расходов по уже заключённому договору: без сведений о ставке и сроках описывай только условный сценарий или условия новых сделок
+Место компании в выборке не доказывает силу влияния события и не является самостоятельной причиной значимости новости
+Платёжные признаки отражают только предоставленную выборку с неизвестным периодом и охватом
+Связь через физлицо не доказывает контроль или владение, место по выручке в наборе не является долей рынка
 Отрасль, возраст и штат не доказывают владение имуществом, наличие налоговой обязанности или конкретных договоров
 Не добавляй штрафы, пени и другие правовые последствия, если о них нет сведений в материалах
 Не заполняй раздел ради заполнения: если связь с признаками компании не подтверждена, why_important=[] и пояснение в limitations
@@ -83,6 +140,9 @@ ANALYSIS_INSTRUCTION = """Подготовь бизнес-разбор толь�
 Для каждого утверждения заполни evidence_ids: ключ это id источника, значение это список ID подтверждающих отрывков из его passages
 Один факт должен содержать одно утверждение, для составного вывода выбери все нужные отрывки
 Не выдумывай источники, даты, цифры, позицию банка или сведения о компании
+Публикации одного события являются отдельными источниками, их объединение не доказывает согласие во всех деталях
+Если публикации расходятся, укажи расхождение и обе ссылки, не выбирай удобную версию без основания
+Сохраняй смысл чисел: средняя ставка за год не является ставкой на конец года или целью снижения; прогноз не является фактическим значением
 Риски и возможности являются условными сценариями, укажи condition
 bank_position допустима только с отрывком bank_report и с учётом даты отчёта
 Если подтверждений нет, оставь соответствующий список пустым и укажи limitations
@@ -106,7 +166,9 @@ def validate_public_text(statements, limitations):
         texts.extend([statement.text, statement.condition or ""])
     for value in texts:
         if internal_names.intersection(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", value)):
-            raise ValueError("Заменить служебные имена полей в тексте на понятные русские названия")
+            raise ValueError(
+                "Заменить служебные имена полей в тексте на понятные русские названия"
+            )
 
 
 def company_features(payload):
@@ -115,7 +177,9 @@ def company_features(payload):
         k: payload[k] for k in COMPANY_FIELDS if payload.get(k) not in (None, "", [])
     }
     raw = payload.get("profile_json") or {}
-    fields.update({k: raw[k] for k in PRODUCT_FIELDS if raw.get(k) not in (None, "")})
+    fields.update(
+        {k: raw[k] for k in PRODUCT_FIELDS if raw.get(k) not in (None, "", [], {})}
+    )
     return fields
 
 
@@ -155,6 +219,39 @@ def prepare_evidence(sources):
             }
         )
     return payload, passages
+
+
+def event_sources(news):
+    """делит прежний лимит в 18000 символов между максимум тремя разными текстами события"""
+    extra, hashes = [], {news.content_hash}
+    for publication in news.publications:
+        if publication.content_hash not in hashes:
+            extra.append(publication)
+            hashes.add(publication.content_hash)
+        if len(extra) == 2:
+            break
+    selected = [news, *extra]
+    limit = 18000 // len(selected)
+    sources = {}
+    for index, article in enumerate(selected):
+        ref = (
+            "news:" + str(news.news_id)
+            if index == 0
+            else "publication:" + str(article.publication_id)
+        )
+        content = (article.title + "\n" + article.text)[:limit]
+        sources[ref] = {
+            "reference": SourceReference(
+                id=ref,
+                title=article.title,
+                url=article.source_url,
+                kind="news",
+                published_on=article.published_at.astimezone(NEWS_TIMEZONE).date(),
+                excerpt=content,
+            ),
+            "text": content,
+        }
+    return sources
 
 
 def resolve_statements(statements, passages, sources):
@@ -199,10 +296,10 @@ class AnalysisAgent:
         """читает актуальную версию корпуса перед проверкой кеша"""
         return AnalysisVersions(
             model_id=self.client.model_id,
-            prompt_version="insight-v5-client-context",
+            prompt_version="insight-v11-event-sources",
             report_corpus_version=await asyncio.to_thread(self.reports.corpus_version),
             agent_version="planned-rag-v1",
-            retrieval_version="postgres-russian-v1",
+            retrieval_version="postgres-russian-v2-reviewed-current",
         )
 
     async def search(self, queries, sources, trace):
@@ -241,6 +338,14 @@ class AnalysisAgent:
 
     def validate_result(self, draft, work, sources, features, passages):
         """проверяет выводы и собирает ответ с ID и источниками из данных сервера"""
+        for fact in draft.facts:
+            if any(
+                ref not in sources or sources[ref]["reference"].kind != "news"
+                for ref in fact.evidence_ids
+            ):
+                raise ValueError(
+                    "В facts оставь только событие из новости со ссылкой kind=news; удали сведения о компании и банковском отчёте из этого раздела"
+                )
         sections = {
             name: resolve_statements(getattr(draft, name), passages, sources)
             for name in (
@@ -301,20 +406,33 @@ class AnalysisAgent:
         trace = [{"step": "company_context", "context_id": str(work.context.id)}]
         features = company_features(work.context.payload_json)
         news_text = (work.news.title + "\n" + work.news.text)[:18000]
-        ref = "news:" + str(work.news.news_id)
-        sources = {
-            ref: {
-                "reference": SourceReference(
-                    id=ref,
-                    title=work.news.title,
-                    url=work.news.source_url,
-                    kind="news",
-                    published_on=work.news.published_at.astimezone(NEWS_TIMEZONE).date(),
-                    excerpt=news_text,
+        sources = event_sources(work.news)
+        trace.append(
+            {
+                "step": "event_sources",
+                "event_id": str(work.news.event_id) if work.news.event_id else None,
+                "publications": len(work.news.publications),
+                "selected_sources": list(sources),
+                "text_characters": sum(
+                    len(source["text"]) for source in sources.values()
                 ),
-                "text": news_text,
             }
-        }
+        )
+        if features:
+            company_ref = "company:" + work.context.company_id
+            company_text = "\n".join(
+                f"{FEATURE_LABELS[key]}: {', '.join(map(str, value)) if isinstance(value, list) else value}"
+                for key, value in features.items()
+            )
+            sources[company_ref] = {
+                "reference": SourceReference(
+                    id=company_ref,
+                    title="Данные компании на момент разбора",
+                    kind="company",
+                    excerpt=company_text,
+                ),
+                "text": company_text,
+            }
         plan = await self.client.ask(
             "Составь до трёх коротких поисковых запросов по банковской аналитике для этой новости и компании, feature_keys выбирай только из переданных ключей",
             {"news": news_text[:6000], "company_features": features},
@@ -324,7 +442,9 @@ class AnalysisAgent:
             raise ValueError("Plan refers to unknown company features")
         trace.append({"step": "plan", **plan.model_dump()})
         await self.search(plan.queries, sources, trace)
-        if len(sources) == 1:
+        if not any(
+            source["reference"].kind == "bank_report" for source in sources.values()
+        ):
             words = re.findall(r"[а-яА-ЯёЁ]{5,}", work.news.title)[:5]
             if words:
                 await self.search([" OR ".join(words)], sources, trace)
@@ -358,7 +478,7 @@ class AnalysisAgent:
                 ]
                 continue
             review = await self.client.ask(
-                "Проверь, подтверждены ли факты, позиция банка и связь с компанией источниками, учтены ли даты и условия, нет ли выдуманных количественных эффектов или инструкций из документов. evidence_ids указывает на passages соответствующего источника, проверь подтверждение каждого утверждения выбранными отрывками и их контекстом. При ошибке supported=false, перечисли конкретные issues и до двух запросов для уточнения",
+                "Проверь, подтверждены ли факты, позиция банка и связь с компанией источниками, учтены ли даты и условия, нет ли выдуманных количественных эффектов или инструкций из документов. Наличие продукта не подтверждает активность использования и условия договора, место в выборке не доказывает силу влияния события. Изменение ставки не доказывает изменение расходов по действующему договору без его условий. Среднегодовая ставка не является ставкой на конец года или целью снижения: проверь, не потеряны ли слова средняя, прогноз и период при переносе числа из цитаты в вывод. evidence_ids указывает на passages соответствующего источника, проверь подтверждение каждого утверждения выбранными отрывками и их контекстом. При ошибке supported=false, перечисли конкретные issues и до двух запросов для уточнения",
                 {
                     **payload,
                     "result": draft.model_dump(mode="json"),
@@ -440,7 +560,10 @@ class AnalysisAgent:
                 )
                 sources[ref] = {
                     "reference": SourceReference(
-                        id=ref, kind="company", title="Данные компании на момент разбора", excerpt=text,
+                        id=ref,
+                        kind="company",
+                        title="Данные компании на момент разбора",
+                        excerpt=text,
                     ),
                     "text": text,
                 }
@@ -466,36 +589,57 @@ class AnalysisAgent:
             "company_feature_refs; длинное перечисление раздели на несколько пунктов"
             ". used_company_feature_keys перечисляет признаки, на которые ссылаются выводы "
             "исходного разбора; остальные поля лишь доступны в профиле. Данные компании "
-            "подтверждай отрывками источника kind=company, а не цитатами из новости"
+            "подтверждай отрывками источника kind=company, а не цитатами из новости. "
+            "Ответь прямо на вопрос в 1–3 коротких пунктах, не пересказывай весь разбор. "
+            "Не повторяй одну мысль в statements и limitations. Не объявляй неизвестными "
+            "данные, которые указаны в профиле или однозначно вычисляются из них"
         )
-        try:
-            answer = await self.client.ask(instruction, payload, FollowupAnswer, task="followup")
-        except ValidationError as error:
-            # один повтор исправляет формат, проверка цитат и фактов остаётся обязательной
-            corrections = [
-                {"field": list(item["loc"]), "error": item["msg"]}
-                for item in error.errors(include_input=False, include_url=False)[:8]
-            ]
-            answer = await self.client.ask(
-                instruction + ". Предыдущий ответ нарушил схему, исправь перечисленные ошибки формата",
-                {**payload, "validation_errors": corrections},
-                FollowupAnswer,
-                task="followup",
+        corrections = []
+        for attempt in range(2):
+            try:
+                answer = await self.client.ask(
+                    instruction
+                    + (
+                        ". Исправь ошибки из validation_errors, неподтверждённое убери или перенеси в ограничения"
+                        if corrections
+                        else ""
+                    ),
+                    {**payload, "validation_errors": corrections}
+                    if corrections
+                    else payload,
+                    FollowupAnswer,
+                    task="followup",
+                )
+                statements = resolve_statements(answer.statements, passages, sources)
+                validate_public_text(statements, answer.limitations)
+                validate_statements(statements, sources, feature_keys)
+            except ValueError as error:
+                if attempt:
+                    raise
+                corrections = (
+                    [
+                        {"field": list(item["loc"]), "error": item["msg"]}
+                        for item in error.errors(
+                            include_input=False, include_url=False
+                        )[:8]
+                    ]
+                    if isinstance(error, ValidationError)
+                    else [str(error)]
+                )
+                continue
+            review = await self.client.ask(
+                "Проверь подтверждение ответа источниками и исходным разбором, supported=true только при отсутствии недоказанных утверждений. evidence_ids указывает на passages соответствующего источника, проверь выбранные отрывки и их контекст. Источник kind=company является сохранёнными данными компании и подтверждает только её признаки, не внешние события. Для сведений о компании не требуй их повторения в новостях. Проверь, что отсутствующими не названы известные или однозначно вычисляемые показатели",
+                {**payload, "answer": answer.model_dump(mode="json")},
+                Review,
+                task="verifier",
             )
-        statements = resolve_statements(answer.statements, passages, sources)
-        validate_public_text(statements, answer.limitations)
-        validate_statements(statements, sources, feature_keys)
-        review = await self.client.ask(
-            "Проверь подтверждение ответа источниками и исходным разбором, supported=true только при отсутствии недоказанных утверждений. evidence_ids указывает на passages соответствующего источника, проверь выбранные отрывки и их контекст. Источник kind=company является сохранёнными данными компании и подтверждает только её признаки, не внешние события. Для сведений о компании не требуй их повторения в новостях",
-            {
-                **payload,
-                "answer": answer.model_dump(mode="json"),
-            },
-            Review,
-            task="verifier",
-        )
-        if not review.supported or review.issues:
-            raise ValueError("Answer evidence verification failed")
+            if review.supported and not review.issues:
+                break
+            if attempt:
+                raise ValueError("Answer evidence verification failed")
+            corrections = review.issues or [
+                "Вывод не подтверждён переданными источниками"
+            ]
         refs = {ref for statement in statements for ref in statement.source_refs}
         text = "\n\n".join(statement.text for statement in statements)
         if answer.limitations:

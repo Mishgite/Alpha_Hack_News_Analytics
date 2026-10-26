@@ -19,6 +19,7 @@ from sqlalchemy import create_engine, text
 from app.api import dependencies
 from app.api.application import ApiSettings, create_app
 from app.api.insights import (
+    get_quality_service,
     get_question_service,
     get_report_service,
     get_runtime_service,
@@ -60,10 +61,89 @@ from app.services.news import NewsService
 from app.services.news_pipeline import NewsPipeline
 from app.services.profiles import ProfileService
 from app.services.questions import QuestionService
+from app.services.quality import QualityService
 from app.services.ranking import rank_news
 from app.services.reports import ReportService
 from app.services.runtime import RuntimeService
 from app.services.worker import BackgroundWorker
+
+
+def test_cross_source_copy_keeps_canonical_and_separates_updates(services):
+    from app.schemas.services import IncomingNews
+
+    news = services["news"]
+    sources = ["copy-a-" + uuid4().hex, "copy-b-" + uuid4().hex]
+    for source in sources:
+        news.register_source(source, kind="rss")
+    article = IncomingNews(
+        source=sources[0],
+        external_id="1",
+        url="https://example.org/first",
+        title="Производство выросло на 10%",
+        body="В отчётном периоде выпуск продукции предприятия вырос на 10% по отношению к предыдущему году. "
+        * 4,
+        published_at=datetime.now(UTC),
+    )
+    original = news.save_news(article)
+    copy = article.model_copy(
+        update={
+            "source": sources[1],
+            "external_id": "2",
+            "url": "https://example.org/copy",
+        }
+    )
+    repeated = news.save_news(copy)
+    assert repeated.news_id != original.news_id
+    assert repeated.source_url == copy.url
+    assert repeated.event_id == news.get_news(original.news_id).event_id
+    assert news.save_news(copy).news_id == repeated.news_id
+    assert (
+        news.save_news(copy.model_copy(update={"url": article.url})).news_id
+        == repeated.news_id
+    )
+    revised = copy.model_copy(update={"body": copy.body.replace("10%", "15%")})
+    changed = news.save_news(revised)
+    assert changed.news_id != original.news_id
+    assert changed.news_id == repeated.news_id
+    assert changed.event_id is None
+    assert news.get_news(original.news_id).text == article.body
+    assert news.save_news(revised).news_id == changed.news_id
+    with services["uow"]() as db:
+        row = db._session.execute(
+            text(
+                "select news_id from news_attributions where source_code=:source and external_id='2'"
+            ),
+            {"source": sources[1]},
+        ).first()
+        assert row[0] == changed.news_id
+
+
+def test_worker_filters_rss_categories_before_limit():
+    from app.parser.models import NewsItem
+    from app.schemas.worker import WorkerSource
+
+    unrelated = NewsItem(
+        source="test", title="Спорт", raw={"tags": [{"term": "Спорт"}]}
+    )
+    useful = NewsItem(
+        source="test", title="Экономика", raw={"tags": [{"term": "Экономика"}]}
+    )
+    pipeline = Mock()
+    pipeline.save_parsed_news.return_value = SimpleNamespace(news_ids=[], errors=[])
+    worker = BackgroundWorker(
+        news_pipeline=pipeline, fetcher=lambda *a, **k: [unrelated, useful]
+    )
+    asyncio.run(
+        worker.fetch_source(
+            WorkerSource(
+                code="test",
+                url="https://example.org/rss",
+                limit=1,
+                categories=["Экономика"],
+            )
+        )
+    )
+    assert pipeline.save_parsed_news.call_args.args[0] == [useful]
 
 
 @pytest.fixture(scope="module")
@@ -395,7 +475,7 @@ class FixtureTransport:
             evidence_ids={source["id"]: [source["passages"][0]["id"]]},
         )
         return AnalysisDraft(
-            facts=[evidence],
+            facts=[evidence.model_dump()],
             why_important=[
                 {**evidence.model_dump(), "company_feature_refs": ["industry"]}
             ],
@@ -430,6 +510,9 @@ def test_review_with_passage_ids_still_controls_publication(corrected):
     )
     work = SimpleNamespace(
         news=SimpleNamespace(
+            content_hash="test",
+            publications=[],
+            event_id=None,
             news_id=uuid4(),
             title="Стоимость перевозок выросла",
             text="Перевозки дорожают, поэтому необходимо проверять транспортные расходы компании",
@@ -483,7 +566,8 @@ def test_analysis_rejects_internal_fields_in_public_text(field):
 
 
 @pytest.mark.parametrize("invalid_answers", [0, 1, 2])
-def test_followup_receives_saved_company_values(invalid_answers):
+@pytest.mark.parametrize("failure", ["schema", "source", "review"])
+def test_followup_receives_saved_company_values(invalid_answers, failure):
     """передаёт снимок компании, исправляет формат один раз и отклоняет повторную ошибку"""
     captured = []
     fixture = FixtureTransport()
@@ -494,10 +578,21 @@ def test_followup_receives_saved_company_values(invalid_answers):
         raw = await fixture(messages, schema)
         if schema is FollowupAnswer:
             followup_calls.append(raw)
-            if len(followup_calls) <= invalid_answers:
+            if len(followup_calls) <= invalid_answers and failure != "review":
                 invalid = json.loads(raw)
-                invalid["statements"][0]["company_feature_refs"] = ["industry"] * 8
+                if failure == "schema":
+                    invalid["statements"][0]["company_feature_refs"] = ["industry"] * 8
+                else:
+                    invalid["statements"][0]["evidence_ids"] = {"news:one": ["unknown"]}
                 return json.dumps(invalid)
+        if (
+            schema is Review
+            and failure == "review"
+            and len(followup_calls) <= invalid_answers
+        ):
+            return json.dumps(
+                {"supported": False, "issues": ["Вывод не подтверждён"], "queries": []}
+            )
         return raw
 
     agent = AnalysisAgent(client=JsonClient(transport=transport))
@@ -533,13 +628,13 @@ def test_followup_receives_saved_company_values(invalid_answers):
         },
     )
     if invalid_answers == 2:
-        with pytest.raises(ValueError, match="at most 6"):
+        with pytest.raises(ValueError):
             asyncio.run(agent.answer(analysis, [], "Какая выручка?", context=context))
         assert len(followup_calls) == 2
         return
     asyncio.run(agent.answer(analysis, [], "Какая выручка?", context=context))
     assert len(followup_calls) == 1 + invalid_answers
-    if invalid_answers:
+    if invalid_answers and failure == "schema":
         assert captured[1]["validation_errors"][0]["field"] == [
             "statements",
             0,
@@ -601,6 +696,7 @@ def test_api_and_worker_cycle(services):
         (get_runtime_service, s["runtime"]),
         (get_market_service, s["market"]),
         (get_question_service, questions),
+        (get_quality_service, QualityService(uow_factory=s["uow"])),
     ]:
         app.dependency_overrides[dependency] = lambda service=service: service
     with TestClient(app) as client:
@@ -708,6 +804,16 @@ def test_api_and_worker_cycle(services):
         )
         analysis = asyncio.run(worker.process_analysis())
         assert analysis.result.facts and analysis.trace
+        rating_url = f"/api/analyses/{analysis.id}/feedback"
+        assert client.get(rating_url).json() == {"useful": None}
+        assert client.put(rating_url, json={"useful": True}).json() == {"useful": True}
+        assert client.put(rating_url, json={"useful": False}).json() == {
+            "useful": False
+        }
+        assert client.put(rating_url, json={"useful": "false"}).status_code == 422
+        quality = QualityService(uow_factory=s["uow"]).snapshot()
+        assert quality["usefulness_30d"] == {"votes": 1, "useful": 0, "rate": 0}
+
         assert (
             client.get(f"/api/analysis-jobs/{job.json()['id']}").json()["status"]
             == "ready"
@@ -790,6 +896,8 @@ def test_api_and_worker_cycle(services):
         assert client.get(f"/api/feed/{snapshot}").status_code == 403
         assert client.get(f"/api/analyses/{analysis.id}").status_code == 403
         assert client.get(f"/api/analyses/{analysis.id}/context").status_code == 403
+        assert client.get(rating_url).status_code == 403
+        assert client.put(rating_url, json={"useful": True}).status_code == 403
         assert client.post("/api/auth/logout").status_code == 204
         assert client.get("/api/profile").status_code == 401
 
@@ -1002,7 +1110,7 @@ def test_feed_preserves_geography_and_reads_old_snapshots(services):
     assert item.ranking.geography_score == 0.5
     assert item.ranking.geography_bonus > 0
     assert "Краснодарский край" in item.ranking.geography_reason
-    assert item.ranking.ranking_version == "formula-v3-business-context"
+    assert item.ranking.ranking_version == "formula-v4-counterparties"
     with s["uow"]() as db:
         snapshot = db._session.execute(
             text("SELECT preference_context_json FROM feed_snapshots WHERE id=:id"),

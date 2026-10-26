@@ -1530,6 +1530,13 @@ code {
   color: var(--muted);
   margin-top: 8px;
 }
+.answer-limitations {
+  margin: 12px 0;
+}
+.answer-limitations summary {
+  cursor: pointer;
+  font-size: 13px;
+}
 .question-section {
   padding: 26px;
   background: var(--surface);
@@ -2908,3 +2915,11 @@ code {
 .company-picker #company-results { margin-top: 14px; }
 
 .feed-controls { justify-content: space-between; flex-wrap: wrap; }
+.event-sources { margin: 20px 0; }
+.event-sources summary { cursor: pointer; font-weight: 600; }
+.event-source { display: grid; gap: 8px; padding: 16px 0; }
+.event-source small { opacity: .7; }
+.event-source .text-button { justify-self: start; }
+
+.analysis-feedback { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+.analysis-feedback [aria-pressed="true"] { border-color: var(--accent, #df2420); box-shadow: inset 0 0 0 1px var(--accent, #df2420); }

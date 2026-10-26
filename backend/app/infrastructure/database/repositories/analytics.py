@@ -407,15 +407,29 @@ class ReportRepository:
                 .where(
                     AlfaReportChunk.terms_tsvector.op("@@")(tsquery),
                     AlfaReport.status == "ready",
+                    AlfaReport.id.in_(self.current_versions()),
+                    (
+                        AlfaReport.report_date.is_(None)
+                        | (AlfaReport.report_date <= func.current_date())
+                    ),
                 )
                 .order_by(
                     func.ts_rank_cd(AlfaReportChunk.terms_tsvector, tsquery).desc(),
                     AlfaReportChunk.id,
                 )
-                .limit(limit)
+                .limit(min(500, limit * 20))
             )
         )
 
+        # сначала берём лучший фрагмент каждого документа, чтобы один длинный PDF не занял весь контекст
+        first, extra, seen = [], [], set()
+        for row in rows:
+            if row[1].id in seen:
+                extra.append(row)
+            else:
+                seen.add(row[1].id)
+                first.append(row)
+        rows = (first + extra)[:limit]
         return [
             ReportChunkData(
                 id=chunk.id,
@@ -455,12 +469,24 @@ class ReportRepository:
         self._session.flush()
         return report_id
 
+    @staticmethod
+    def current_versions():
+        """выбирает последнюю готовую загрузку каждого файла, сохраняя старые версии для цитат"""
+        return (
+            select(AlfaReport.id)
+            .where(AlfaReport.status == "ready")
+            .distinct(AlfaReport.filename)
+            .order_by(
+                AlfaReport.filename, AlfaReport.ingested_at.desc(), AlfaReport.id.desc()
+            )
+        )
+
     def versions(self):
         """возвращает хэши готовых версий в стабильном порядке"""
         return list(
             self._session.scalars(
                 select(AlfaReport.file_hash)
-                .where(AlfaReport.status == "ready")
+                .where(AlfaReport.id.in_(self.current_versions()))
                 .order_by(AlfaReport.file_hash)
             )
         )

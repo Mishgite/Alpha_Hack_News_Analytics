@@ -95,22 +95,11 @@ Copy-Item frontend/.env.example frontend/.env.local
 
 ### Вариант A — Docker
 
-```bash
-cp docker/.env.example docker/.env
-docker compose --env-file docker/.env -f docker/compose.yaml up --build -d
-docker compose --env-file docker/.env -f docker/compose.yaml ps -a
-docker compose --env-file docker/.env -f docker/compose.yaml logs init-db
-```
+Compose запускает PostgreSQL, подготовку данных, API и воркер; HTTPS-прокси подключается отдельным профилем. Перед запуском нужны CSV компаний, связи, платежи, выбранные ID и подготовленные PDF. Порт PostgreSQL наружу не публикуется
 
-В PowerShell вместо `cp` можно использовать `Copy-Item`. Ожидаем: `database` здоров, `init-db` завершился с кодом `0`, в логах — `Reaction trigger: OK` и `OK`.
+[Подготовка файлов, переменные окружения и команды запуска](backend/docs/run.md#сервер-docker-и-отдельный-фронтенд)
 
-При стандартном `docker/.env` подключение для локального API:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg://postgres:alfa_local_dev@127.0.0.1:5433/alfa_news
-```
-
-Compose запускает **БД и инициализацию схемы**. API, frontend и worker запускаются отдельно. Порт контейнерной БД с компьютера — **5433**; внутри Docker — `database:5432`.
+При таком запуске шаги ручного создания БД и запуска Python-процессов ниже не требуются. Фронтенд размещается отдельно, его адрес задаётся через `FRONTEND_ORIGIN`, адрес API при сборке фронта через `VITE_API_URL`
 
 ### Вариант B — установленный PostgreSQL
 
@@ -143,11 +132,12 @@ python backend/app/demo_data.py
 | Материал | Путь | Назначение |
 |---|---|---|
 | `df_Uid_data_hack.csv` | `backend/data/companies/` | Исходные данные компаний |
+| `df_Fid_Uid_link_hack.csv`, `df_Uid_payment_hack.csv` | `backend/data/companies/` | Связи компаний и платёжные агрегаты |
 | `selection.txt` | `backend/data/companies/` | Необязательный список 50 ID, по одному в строке |
 | `manifest.json` + JSON страниц | `backend/data/reports_processed/` | Подготовленная аналитика банка |
 | Исходные PDF | `backend/data/reports/` | Открытие оригинала цитируемого документа |
 
-CSV и отчёты получить у команды; в Git они не хранятся. Без `selection.txt` импорт сам выбирает 50 компаний и сохраняет их ID.
+Проверенный комплект файлов можно собрать через `python backend/app/prepare_submission.py`. CSV и отчёты получить у команды; в Git они не хранятся. Без `selection.txt` импорт сам выбирает 50 компаний и сохраняет их ID.
 
 ```bash
 python backend/app/import_companies.py --check
@@ -175,7 +165,7 @@ python backend/app/import_reports.py
 python -m pip install pymupdf openpyxl
 ```
 
-Для OCR сканов нужен Tesseract с русским и английским языками. В Docker-образе уже есть PyMuPDF и Tesseract. `import_reports.py` читает готовые JSON; исходные PDF/CSV обрабатывает отдельный [парсер](backend/app/newspaper_parser/newspaper_parser.py).
+Для OCR сканов нужен Tesseract с русским и английским языками. В образе сервиса `parser` уже есть PyMuPDF, Tesseract и openpyxl. `import_reports.py` читает готовые JSON; исходные PDF/CSV обрабатывает отдельный [парсер](backend/app/newspaper_parser/newspaper_parser.py).
 
 Чтобы импортировать исходные материалы в Docker, положить их в `backend/app/newspaper_parser/data/` и выполнить:
 
@@ -183,7 +173,7 @@ python -m pip install pymupdf openpyxl
 docker compose --env-file docker/.env --profile ingest -f docker/compose.yaml run --build --rm parser python -m app.newspaper_parser.newspaper_parser --keep-files
 ```
 
-`--keep-files` сохраняет входные файлы после импорта. Для XLSX в контейнер также потребуется добавить `openpyxl`.
+`--keep-files` сохраняет входные файлы после импорта. Подготовка проверенного корпуса банковской аналитики описана в [инструкции](backend/docs/run.md#повторная-подготовка-pdf).
 
 ## 7. Запуск сервисов
 

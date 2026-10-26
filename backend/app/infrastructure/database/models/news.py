@@ -63,6 +63,14 @@ class SourceRun(UUIDPrimaryKey, Base):
     errors_json: Mapped[list] = json_array()
 
 
+class NewsEvent(UUIDPrimaryKey, CreatedAt, Base):
+    """объединяет публикации об одном событии; ручное разделение отключает автоматическую группировку"""
+
+    __tablename__ = "news_events"
+    matching_version: Mapped[str]
+    automatic: Mapped[bool] = mapped_column(server_default="true")
+
+
 class News(UUIDPrimaryKey, CreatedAt, Base):
     """текст материала и признаки его текущей версии; старые признаки сбрасываются при обновлении"""
 
@@ -98,6 +106,7 @@ class News(UUIDPrimaryKey, CreatedAt, Base):
             "published_at",
             postgresql_where=text("tagging_status = 'ready'"),
         ),
+        Index("ix_news_event_window", "language", "published_at"),
     )
     canonical_source: Mapped[str] = mapped_column(
         ForeignKey("news_sources_registry.code")

@@ -1,0 +1,444 @@
+{
+  "version": 1,
+  "label_source": "synthetic_regression_cases",
+  "ranking": [
+    {
+      "id": "biz_agr",
+      "topic": "biz_agr",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_agr",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_agr",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_agr",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    },
+    {
+      "id": "biz_it",
+      "topic": "biz_it",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_it",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_it",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_it",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    },
+    {
+      "id": "biz_construct",
+      "topic": "biz_construct",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_construct",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_construct",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_construct",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    },
+    {
+      "id": "biz_health",
+      "topic": "biz_health",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_health",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_health",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_health",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    },
+    {
+      "id": "biz_freight",
+      "topic": "biz_freight",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_freight",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_freight",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_freight",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    },
+    {
+      "id": "biz_retail",
+      "topic": "biz_retail",
+      "role": "biz_tax",
+      "news": [
+        {
+          "tag": "biz_retail",
+          "relevance": 3,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_retail",
+          "relevance": 3,
+          "age_days": 2,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_retail",
+          "relevance": 3,
+          "age_days": 4,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_tax",
+          "relevance": 1,
+          "age_days": 3,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_culture",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_science",
+          "relevance": 0,
+          "age_days": 1,
+          "scope": "industry"
+        },
+        {
+          "tag": "biz_auto",
+          "relevance": 0,
+          "age_days": 0,
+          "scope": "industry"
+        }
+      ]
+    }
+  ],
+  "retrieval": [
+    {
+      "query": "ключевая ставка",
+      "expected": [
+        "ALFA-Macro_Insights-Policy_Rate_11Sep.pdf"
+      ]
+    },
+    {
+      "query": "потребление",
+      "expected": [
+        "ALFA-consumption.pdf"
+      ]
+    },
+    {
+      "query": "золото",
+      "expected": [
+        "Gold_digest_August26.pdf"
+      ]
+    },
+    {
+      "query": "сталь",
+      "expected": [
+        "ALFA_Russian_Steels_1К21PreviewUpdate_15Apr2021.pdf"
+      ]
+    },
+    {
+      "query": "инфляция",
+      "expected": [
+        "Inflation_tracker_02.pdf"
+      ]
+    },
+    {
+      "query": "вакцинация пингвинов",
+      "expected": []
+    },
+    {
+      "query": "футбольный трансфер",
+      "expected": []
+    }
+  ],
+  "duplicates": [
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "Банк России оставил ключевую ставку на уровне 14 процентов",
+        "На заседании совет директоров Банка России оставил ключевую ставку на уровне 14 процентов. Регулятор будет принимать дальнейшие решения с учётом динамики инфляции и ожиданий населения."
+      ],
+      "same": true
+    },
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "same": true
+    },
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "Банк России оставил ключевую ставку на уровне 15 процентов",
+        "На заседании совет директоров Банка России оставил ключевую ставку на уровне 15 процентов. Регулятор будет принимать дальнейшие решения с учётом динамики инфляции и ожиданий населения."
+      ],
+      "same": false
+    },
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "Банк России повысил ключевую ставку на уровне 14 процентов",
+        "На заседании совет директоров Банка России оставил ключевую ставку на уровне 14 процентов. Регулятор будет принимать дальнейшие решения с учётом динамики инфляции и ожиданий населения."
+      ],
+      "same": false
+    },
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "Банк России не оставил ключевую ставку на уровне 14 процентов",
+        "На заседании совет директоров Банка России оставил ключевую ставку на уровне 14 процентов. Регулятор будет принимать дальнейшие решения с учётом динамики инфляции и ожиданий населения."
+      ],
+      "same": false
+    },
+    {
+      "left": [
+        "ЦБ сохранил ключевую ставку на уровне 14 процентов",
+        "Совет директоров Банка России сохранил ключевую ставку на уровне 14 процентов. Решение принято на заседании регулятора. Дальнейшие решения будут зависеть от динамики инфляции и ожиданий населения."
+      ],
+      "right": [
+        "Сбербанк оставил ключевую ставку на уровне 14 процентов",
+        "На заседании совет директоров Банка России оставил ключевую ставку на уровне 14 процентов. Регулятор будет принимать дальнейшие решения с учётом динамики инфляции и ожиданий населения."
+      ],
+      "same": false
+    }
+  ]
+}

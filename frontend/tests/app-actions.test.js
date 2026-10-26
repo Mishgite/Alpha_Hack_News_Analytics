@@ -48,7 +48,7 @@ function application(request) {
   const source = readFileSync(new URL("../src/app.js", import.meta.url), "utf8")
     .replace(/^import\s[\s\S]*?;\s*/gm, "")
     .replace(/hydrate\(\);\s*theme\(\);\s*render\(\);\s*$/, "");
-  vm.runInContext(source + "\nthis.app = { state, market, feed, reason, feedPreferences, interestSettings, changeProfile, renderConversation, invalidate: () => ++generation };", context);
+  vm.runInContext(source + "\nthis.app = { state, market, feed, reason, loadUsefulness, feedPreferences, interestSettings, changeProfile, renderConversation, answerBody, invalidate: () => ++generation };", context);
   return {
     app: context.app, node,
     click: (button) => handlers.get("click")({ target: {
@@ -61,6 +61,15 @@ const overview = () => ({
   status: "ready", size_basis: "turnover_rub", top_movers: [],
   heatmap: [{ ticker: "SBER", name: "Сбербанк", size_metric: 100, color_metric: 1,
     change_percent: 1, turnover_rub: 100, as_of: "2026-10-23T20:50:00Z" }],
+});
+
+test("ограничения ответа доступны отдельно, отсутствие данных остаётся видимым", () => {
+  const { app } = application(async () => ({}));
+  const normal = app.answerBody("Проверить договор\n\nОграничения: Условия неизвестны <script>");
+  assert.match(normal, /<p>Проверить договор<\/p>/);
+  assert.match(normal, /<details class="answer-limitations">/);
+  assert.match(normal, /&lt;script&gt;/);
+  assert.equal(app.answerBody("\n\nОграничения: Данных недостаточно"), "<p>Данных недостаточно</p>");
 });
 
 test("кнопка обновления биржи делает POST к источнику, чтение экрана делает GET", async () => {
@@ -183,4 +192,32 @@ test("сбой сохранения профиля не оставляет ви�
   assert.equal(ui.app.state.feed, null);
   assert.equal(ui.app.state.analysis, null);
   assert.equal(ui.app.state.messages.length, 0);
+});
+
+
+test("оценка разбора сохраняет boolean, не отправляя реакцию на темы", async () => {
+  const requests = [];
+  const ui = application(async (...args) => { requests.push(args); return { useful: true }; });
+  ui.app.state.analysis = { id: "analysis-one" };
+  const button = ui.node("rating-button");
+  button.dataset = { action: "rate-analysis", id: "analysis-one", useful: "true" };
+  await ui.click(button);
+  assert.equal(requests[0][0], "PUT");
+  assert.equal(requests[0][1], "/api/analyses/analysis-one/feedback");
+  assert.equal(requests[0][2].useful, true);
+  assert.equal(requests[1][0], "GET");
+  assert.match(ui.node("#analysis-feedback").innerHTML, /aria-pressed="true"/);
+  assert.ok(requests.every((request) => request[1].endsWith("/feedback")));
+});
+
+test("запоздалая оценка прежнего разбора не меняет новый экран", async () => {
+  let finish;
+  const ui = application(() => new Promise((resolve) => { finish = resolve; }));
+  ui.app.state.analysis = { id: "old" };
+  const pending = ui.app.loadUsefulness("old");
+  ui.app.state.analysis = { id: "new" };
+  ui.node("#analysis-feedback").innerHTML = "new rating";
+  finish({ useful: true });
+  await pending;
+  assert.equal(ui.node("#analysis-feedback").innerHTML, "new rating");
 });

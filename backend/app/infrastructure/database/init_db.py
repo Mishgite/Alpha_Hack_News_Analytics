@@ -53,6 +53,13 @@ def initialize_database(engine: Engine) -> bool:
             from app.infrastructure.database.models.runtime import ProcessingState
 
             ProcessingState.__table__.create(connection, checkfirst=True)
+            models.NewsEvent.__table__.create(connection, checkfirst=True)
+            models.AnalysisFeedback.__table__.create(connection, checkfirst=True)
+            next(
+                index
+                for index in models.News.__table__.indexes
+                if index.name == "ix_news_event_window"
+            ).create(connection, checkfirst=True)
             check_database(connection)
             return False
 
@@ -69,6 +76,8 @@ def initialize_database(engine: Engine) -> bool:
         from app.infrastructure.database.models.runtime import ProcessingState
 
         ProcessingState.__table__.create(connection, checkfirst=True)
+        models.NewsEvent.__table__.create(connection, checkfirst=True)
+        models.AnalysisFeedback.__table__.create(connection, checkfirst=True)
         check_database(connection)
     return True
 

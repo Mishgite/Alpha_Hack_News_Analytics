@@ -25,6 +25,12 @@ class CompanyStatement(DraftStatement):
     company_feature_refs: list[str] = Field(min_length=1, max_length=6)
 
 
+class NewsFact(DraftStatement):
+    """описывает событие из новости без переноса данных компании в раздел фактов"""
+
+    company_feature_refs: list[str] = Field(default_factory=list, max_length=0)
+
+
 class ConditionalStatement(DraftStatement):
     """требует условие, при котором возможен риск или возможность"""
 
@@ -35,7 +41,11 @@ class AnalysisDraft(BaseModel):
     """принимает только выводы модели, ID и метаданные источников добавляет сервер"""
 
     model_config = ConfigDict(extra="forbid")
-    facts: list[DraftStatement] = Field(min_length=1, max_length=3)
+    facts: list[NewsFact] = Field(
+        min_length=1,
+        max_length=3,
+        description="Только события из новости, без описания компании или банковского отчёта; ссылки только на источник kind=news",
+    )
     why_important: list[CompanyStatement] = Field(default_factory=list, max_length=2)
     risks: list[ConditionalStatement] = Field(default_factory=list, max_length=2)
     opportunities: list[ConditionalStatement] = Field(
@@ -75,8 +85,10 @@ class FollowupAnswer(BaseModel):
     """содержит ответ с проверяемыми цитатами и ограничениями"""
 
     model_config = ConfigDict(extra="forbid")
-    statements: list[DraftStatement] = Field(default_factory=list, max_length=8)
-    limitations: list[str] = Field(default_factory=list, max_length=8)
+    statements: list[DraftStatement] = Field(default_factory=list, max_length=4)
+    limitations: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        default_factory=list, max_length=3
+    )
 
     @model_validator(mode="after")
     def require_answer(self):

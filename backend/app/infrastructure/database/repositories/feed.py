@@ -108,6 +108,7 @@ class FeedRepository:
                     ranking_details={
                         "reason": item.reason,
                         "matched_signals": item.matched_signals,
+                        "counterparty_signals": item.counterparty_signals,
                         "ranking_version": result.version,
                         "geography_score": item.geography_score,
                         "geography_bonus": item.geography_bonus,

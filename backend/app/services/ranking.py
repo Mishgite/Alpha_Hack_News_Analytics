@@ -4,7 +4,7 @@ from app.schemas.ranking import RankedNews, RankingRequest, RankingResult
 
 from .geography import city_region, region_codes, region_names, resolve_region
 
-RANKING_VERSION = "formula-v3-business-context"
+RANKING_VERSION = "formula-v4-counterparties"
 
 
 def geography_match(profile, geography):
@@ -67,15 +67,27 @@ def rank_news(request: RankingRequest) -> RankingResult:
             if profile.tag_weights.get(tag.id, 0) > 0
         }
         signals = {tag: value for tag, value in signals.items() if value > 0}
+        indirect = {
+            tag.id: min(0.25, profile.counterparty_tag_weights.get(tag.id, 0))
+            * tag.confidence
+            * min(1, candidate.tag_quality_weights.get(tag.id, 1))
+            for tag in features.tags
+            if profile.counterparty_tag_weights.get(tag.id, 0) > 0
+        }
         direct = bool(direct_topics & signals.keys())
         specific = features.business_scope in {"local", "organization"}
-        if not signals or features.business_relevance < 0.3:
+        if (not signals and not indirect) or features.business_relevance < 0.3:
             continue
         if specific and not direct:
             continue
         match = max(
-            value * (1 if tag in direct_topics else 0.7)
-            for tag, value in signals.items()
+            [
+                *indirect.values(),
+                *(
+                    value * (1 if tag in direct_topics else 0.7)
+                    for tag, value in signals.items()
+                ),
+            ]
         )
         age_days = max(
             0, (request.now - candidate.published_at).total_seconds() / 86400
@@ -105,7 +117,15 @@ def rank_news(request: RankingRequest) -> RankingResult:
                 geography_reason=geography_reason,
                 ranking_version=RANKING_VERSION,
                 matched_signals=sorted(signals),
-                reason="Совпали темы профиля: " + ", ".join(sorted(signals)),
+                counterparty_signals=sorted(
+                    tag
+                    for tag in indirect
+                    if indirect[tag]
+                    > signals.get(tag, 0) * (1 if tag in direct_topics else 0.7)
+                ),
+                reason=("Совпали темы профиля: " + ", ".join(sorted(signals)))
+                if signals
+                else "Новость об отрасли контрагентов из платёжной выборки",
             )
         )
     items.sort(key=lambda item: (-item.final_score, str(item.news_id)))

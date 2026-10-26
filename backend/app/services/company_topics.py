@@ -81,14 +81,31 @@ def initial_company_topics(company):
     вес 1,5 даёт отрасли приоритет над общими интересами должности
     это начальная настройка формулы, а не результат обучения
     """
-    code = (company.okved_code or "").strip()
+    return [
+        CompanyTagInput(tag_id=tag, origin="rule", base_weight=1.5)
+        for tag in topics_for_okved(company.okved_code)
+    ]
+
+
+def topics_for_okved(code):
+    """возвращает темы наиболее точного правила ОКВЭД"""
+    code = (code or "").strip()
     if not re.fullmatch(r"[0-9]{2}(?:\.[0-9]{1,2}){0,2}", code):
         return []
     matches = [prefix for prefix in OKVED_TOPICS if code.startswith(prefix)]
     if not matches:
         return []
     prefix = max(matches, key=len)
-    return [
-        CompanyTagInput(tag_id=tag, origin="rule", base_weight=1.5)
-        for tag in OKVED_TOPICS[prefix]
-    ]
+    return list(OKVED_TOPICS[prefix])
+
+
+def counterparty_topics(company):
+    """считает косвенный интерес к отраслям контрагентов по долям платежей в выборке"""
+    weights = {}
+    for direction in ("incoming", "outgoing"):
+        for code, share in company.profile_json.get(
+            f"payment_{direction}_sectors", {}
+        ).items():
+            for tag in topics_for_okved(code):
+                weights[tag] = min(0.25, weights.get(tag, 0) + share / 100 * 0.125)
+    return weights

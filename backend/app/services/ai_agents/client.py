@@ -31,7 +31,24 @@ class JsonClient:
         self.runtime = runtime if runtime is not None else RuntimeService()
 
     async def ask(self, instruction, payload, schema, *, task="analyst"):
-        """получает JSON по схеме, сетевую ошибку автоматически не повторяет"""
+        """повторяет один временный сбой подключения или шлюза с отдельным учётом попытки"""
+        for attempt in range(2):
+            try:
+                return await self._ask_once(instruction, payload, schema, task=task)
+            except (RuntimeError, TimeoutError) as error:
+                cause = error.__cause__
+                retryable = isinstance(
+                    cause, (httpx.ConnectError, httpx.ConnectTimeout)
+                ) or (
+                    isinstance(cause, httpx.HTTPStatusError)
+                    and cause.response.status_code in {429, 502, 503, 504}
+                )
+                if attempt or not retryable:
+                    raise
+                await asyncio.sleep(1)
+
+    async def _ask_once(self, instruction, payload, schema, *, task):
+        """проверяет лимиты, учитывает вызов и проверяет JSON одной попытки"""
         messages = [
             {
                 "role": "system",
@@ -56,10 +73,11 @@ class JsonClient:
         call_id = await asyncio.to_thread(self.runtime.reserve_call, task, model, limit)
         usage, status = {}, "failed"
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(120, connect=15), follow_redirects=False
-            ) as client:
-                async with client.stream(
+            async with (
+                httpx.AsyncClient(
+                    timeout=httpx.Timeout(120, connect=15), follow_redirects=False
+                ) as client,
+                client.stream(
                     "POST",
                     base.rstrip("/") + "/chat/completions",
                     headers={"Authorization": "Bearer " + key},
@@ -71,23 +89,24 @@ class JsonClient:
                         "response_format": {"type": "json_object"},
                         **generation_options(model),
                     },
-                ) as response:
-                    response.raise_for_status()
-                    body = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        body.extend(chunk)
-                        if len(body) > 1_000_000:
-                            raise ValueError("Model response too large")
+                ) as response,
+            ):
+                response.raise_for_status()
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > 1_000_000:
+                        raise ValueError("Model response too large")
             data = json.loads(body)
             usage = data.get("usage") if isinstance(data, dict) else {}
             usage = usage if isinstance(usage, dict) else {}
             result = schema.model_validate_json(model_content(data))
             status = "ready"
             return result
-        except httpx.TimeoutException:
-            raise TimeoutError("Model provider timed out") from None
-        except httpx.HTTPError:
-            raise RuntimeError("Model provider unavailable") from None
+        except httpx.TimeoutException as error:
+            raise TimeoutError("Model provider timed out") from error
+        except httpx.HTTPError as error:
+            raise RuntimeError("Model provider unavailable") from error
         except (json.JSONDecodeError, UnicodeDecodeError):
             raise RuntimeError("Invalid model API response") from None
         finally:

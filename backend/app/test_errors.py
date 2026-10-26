@@ -93,6 +93,78 @@ def test_bad_input_does_not_reach_service(body):
     service.register_demo.assert_not_called()
 
 
+def test_paused_generation_blocks_new_jobs_but_preserves_existing_requests():
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
+
+    from app.api.insights import get_processing_status, request_analysis
+
+    user = SimpleNamespace(id=uuid4())
+    runtime = Mock()
+    runtime.get.side_effect = lambda key: (
+        {
+            "value": {"status": "running", "analysis_enabled": True},
+            "updated_at": datetime.now(UTC),
+        }
+        if key == "worker"
+        else None
+    )
+    runtime.generation_available.return_value = False
+    service = Mock()
+    service.find_requested_job.return_value = None
+    assert get_processing_status(user, runtime)["analysis_available"] is False
+    with pytest.raises(HTTPException) as error:
+        request_analysis(
+            uuid4(), SimpleNamespace(idempotency_key="test"), user, service, runtime
+        )
+    assert error.value.detail == "Analysis generation paused"
+    service.request_analysis.assert_not_called()
+    existing = object()
+    service.find_requested_job.return_value = existing
+    assert (
+        request_analysis(
+            uuid4(), SimpleNamespace(idempotency_key="test"), user, service, runtime
+        )
+        is existing
+    )
+
+
+def test_generation_limits_reset_and_keep_budget_reserve(services, monkeypatch):
+    from app.services.ai_agents import _common
+
+    monkeypatch.setattr(_common, "settings", lambda: {"LLM_DAILY_REQUEST_LIMIT": "1"})
+    runtime = services["runtime"]
+    assert runtime.generation_available()
+    runtime.reserve_call("analyst", "fixture", 1)
+    assert not runtime.generation_available()
+    with services["uow"]() as db:
+        db._session.execute(
+            text("UPDATE llm_usage SET created_at=:old"),
+            {"old": datetime.now(UTC) - timedelta(days=1)},
+        )
+        db.commit()
+    assert runtime.generation_available()
+    runtime.save(
+        "llm_budget",
+        {
+            "remaining": 5,
+            "reserve": 10,
+            "reset_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+        },
+    )
+    assert not runtime.generation_available()
+    runtime.save(
+        "llm_budget",
+        {
+            "remaining": 5,
+            "reserve": 10,
+            "reset_at": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+        },
+    )
+    assert runtime.generation_available()
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -175,8 +247,8 @@ def test_invalid_model_envelope(payload):
         (httpx.ReadTimeout("private-key"), TimeoutError),
     ],
 )
-def test_model_network_failure_has_no_retry(failure, expected):
-    """таймаут, отказ авторизации и лимит провайдера не вызывают повторных платных запросов"""
+def test_model_network_failure_has_bounded_retry(failure, expected):
+    """повторяет временный отказ один раз, учитывает попытки и не раскрывает текст провайдера"""
     runtime = Mock()
     client = JsonClient(runtime=runtime)
     client.config = {
@@ -205,7 +277,10 @@ def test_model_network_failure_has_no_retry(failure, expected):
         with pytest.raises(expected) as caught:
             asyncio.run(client.ask("Проверка", {}, Review))
     assert "private-key" not in str(caught.value)
-    assert len(requests) == 1
+    attempts = 2 if failure == 429 or isinstance(failure, httpx.ConnectError) else 1
+    assert len(requests) == attempts
+    assert runtime.reserve_call.call_count == attempts
+    assert runtime.finish_call.call_count == attempts
     assert runtime.finish_call.call_args.args[1] == "failed"
 
 

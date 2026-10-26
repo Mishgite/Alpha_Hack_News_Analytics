@@ -40,6 +40,41 @@ class RuntimeRepository:
         self.save("market_refresh", {"status": "requested"})
         return True
 
+    def record_quality_check(self, result):
+        """сохраняет последнюю проверку и тридцать результатов, не теряя параллельную запись"""
+        self._session.execute(text("SELECT pg_advisory_xact_lock(684720272)"))
+        previous = self.get("quality_history")
+        items = previous["value"].get("items", []) if previous else []
+        self.save("quality_history", {"items": items[-29:] + [result]})
+        self.save("quality_check", result)
+
+    def record_operation(self, name, seconds, success):
+        """хранит последние сто выполнений задачи под блокировкой, без текстов и ключей API"""
+        key = "operation:" + name
+        self._session.execute(
+            text("SELECT pg_advisory_xact_lock(684720271, hashtext(:key))"),
+            {"key": key},
+        )
+        previous = self.get(key)
+        value = dict(previous["value"]) if previous else {}
+        samples = value.get("samples", [])[-99:] + [
+            {
+                "at": datetime.now(UTC).isoformat(),
+                "seconds": round(seconds, 3),
+                "success": bool(success),
+            }
+        ]
+        self.save(
+            key,
+            {
+                "samples": samples,
+                "last_success_at": samples[-1]["at"]
+                if success
+                else value.get("last_success_at"),
+                "total": value.get("total", 0) + 1,
+            },
+        )
+
     def reserve_call(self, task, model, daily_limit):
         """проверяет общий лимит запросов этой БД и резервирует вызов до обращения к модели"""
         self._session.execute(text("SELECT pg_advisory_xact_lock(684720262)"))
@@ -55,6 +90,15 @@ class RuntimeRepository:
         self._session.add(row)
         self._session.flush()
         return row.id
+
+    def calls_today(self):
+        """считает все зарезервированные попытки с начала суток UTC, включая ошибки"""
+        start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        return self._session.scalar(
+            select(func.count())
+            .select_from(LLMUsage)
+            .where(LLMUsage.created_at >= start)
+        )
 
     def finish_call(self, call_id, status, usage):
         """сохраняет число токенов, стоимость без подтверждённой валюты не записывает"""

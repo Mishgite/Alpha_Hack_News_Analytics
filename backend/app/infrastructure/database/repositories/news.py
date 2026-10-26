@@ -1,8 +1,8 @@
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,8 @@ from app.infrastructure.database.models import (
 from app.schemas.database import TagData
 from app.schemas.news import NewsFeatures, NewsForTagging, StoredNews
 from app.schemas.ranking import NewsCandidate
+
+from .events import EventRepository
 
 
 class NewsRepository:
@@ -48,7 +50,8 @@ class NewsRepository:
             raise ValueError("external_id or url is required")
         if not title.strip() or published_at.tzinfo is None:
             raise ValueError("Title and timezone-aware publication time are required")
-        # блокируем источник до конца транзакции, чтобы два загрузчика не создали одну новость одновременно
+        # общая блокировка не даёт двум источникам одновременно сохранить одинаковый текст
+        self._session.execute(select(func.pg_advisory_xact_lock(684720270)))
         registered = self._session.scalar(
             select(NewsSource).where(NewsSource.code == source).with_for_update()
         )
@@ -101,33 +104,45 @@ class NewsRepository:
         if changed:
             self._session.execute(delete(NewsTag).where(NewsTag.news_id == record.id))
         if url:
-            attribution = (
-                self._session.scalar(
-                    select(NewsAttribution).where(
-                        NewsAttribution.source_code == source,
-                        NewsAttribution.external_id == external_id,
-                    )
-                )
-                if external_id
-                else None
-            )
-            if attribution is None:
-                attribution = self._session.scalar(
-                    select(NewsAttribution).where(
-                        NewsAttribution.news_id == record.id, NewsAttribution.url == url
-                    )
-                )
-            if attribution is None:
-                attribution = NewsAttribution(
-                    news_id=record.id, source_code=source, url=url
-                )
-            if attribution.news_id != record.id:
-                raise ValueError("Source attribution belongs to another article")
-            attribution.external_id = external_id or attribution.external_id
-            attribution.published_at = published_at
-            self._session.add(attribution)
+            self._save_attribution(record.id, source, external_id, url, published_at)
         self._session.flush()
-        return self._dto(record)
+        if changed:
+            EventRepository(self._session).assign(record)
+            self._reuse_features(record)
+        return self.get(record.id)
+
+    def _save_attribution(self, news_id, source, external_id, url, published_at):
+        """сохраняет ссылку на публикацию, обновлённую копию связывает с её новым текстом"""
+        same_url = self._session.scalar(
+            select(NewsAttribution).where(
+                NewsAttribution.news_id == news_id, NewsAttribution.url == url
+            )
+        )
+        if same_url is not None and same_url.source_code != source:
+            return
+        attribution = (
+            self._session.scalar(
+                select(NewsAttribution).where(
+                    NewsAttribution.source_code == source,
+                    NewsAttribution.external_id == external_id,
+                )
+            )
+            if external_id
+            else None
+        )
+        if attribution is None:
+            attribution = self._session.scalar(
+                select(NewsAttribution).where(
+                    NewsAttribution.source_code == source, NewsAttribution.url == url
+                )
+            )
+        if attribution is None:
+            attribution = NewsAttribution(news_id=news_id, source_code=source, url=url)
+        attribution.news_id = news_id
+        attribution.url = url
+        attribution.external_id = external_id or attribution.external_id
+        attribution.published_at = published_at
+        self._session.add(attribution)
 
     @staticmethod
     def _dto(row: News) -> StoredNews:
@@ -155,16 +170,38 @@ class NewsRepository:
             .execution_options(populate_existing=True)
         )
         if lock:
+            self._session.execute(select(func.pg_advisory_xact_lock(684720270)))
             query = query.with_for_update()
         row = self._session.scalar(query)
         if row is None:
             raise LookupError("News not found")
-        return self._dto(row)
+        result = self._dto(row)
+        result.event_id = row.story_cluster_id
+        result.publications = EventRepository(self._session).publications(row)
+        return result
 
     def list_tags(self) -> list[TagData]:
         """возвращает ID и названия активных тегов в порядке ID"""
         rows = self._session.scalars(select(Tag).where(Tag.active).order_by(Tag.id))
         return [TagData.model_validate(row) for row in rows]
+
+    def unique_events(self, items):
+        """оставляет первую публикацию каждого события в уже рассчитанном порядке рейтинга"""
+        self._session.execute(select(func.pg_advisory_xact_lock(684720270)))
+        groups = dict(
+            self._session.execute(
+                select(News.id, News.story_cluster_id).where(
+                    News.id.in_([item.news_id for item in items])
+                )
+            ).all()
+        )
+        seen, result = set(), []
+        for item in items:
+            event = groups.get(item.news_id) or item.news_id
+            if event not in seen:
+                result.append(item)
+                seen.add(event)
+        return result
 
     def list_pending_news(self, *, limit: int = 50) -> list[StoredNews]:
         """читает порцию pending_tagging по времени загрузки, не блокируя её за разметчиком"""
@@ -178,7 +215,16 @@ class NewsRepository:
             .order_by(News.fetched_at, News.id)
             .limit(limit)
         )
-        return [self._dto(row) for row in rows]
+        unique, seen = [], {}
+        for row in rows:
+            key = (row.content_hash, row.language)
+            if not any(
+                abs(row.published_at - date) <= timedelta(days=2)
+                for date in seen.get(key, [])
+            ):
+                unique.append(self._dto(row))
+                seen.setdefault(key, []).append(row.published_at)
+        return unique
 
     def check_candidates(self, expected: list[NewsCandidate]) -> None:
         # проверяем именно признаки, использованные ранжировщиком, и удерживаем строки до сохранения ленты
@@ -321,6 +367,7 @@ class NewsRepository:
         )
         if valid != set(ids):
             raise ValueError("Unknown or inactive tag")
+        self._session.execute(select(func.pg_advisory_xact_lock(684720270)))
         row = self._session.scalar(
             select(News).where(News.id == features.news_id).with_for_update()
         )
@@ -349,7 +396,65 @@ class NewsRepository:
         row.extracted_features = features.model_dump(mode="json")
         row.summary = features.summary
         self._session.flush()
-        return self._dto(row)
+        copies = self._session.scalars(
+            select(News).where(
+                News.id != row.id,
+                News.content_hash == row.content_hash,
+                News.language == row.language,
+                News.tagging_status == "pending_tagging",
+                News.published_at.between(
+                    row.published_at - timedelta(days=2),
+                    row.published_at + timedelta(days=2),
+                ),
+            )
+        )
+        for copy in copies:
+            self._reuse_features(copy, original=row)
+        self._session.flush()
+        return self.get(row.id)
+
+    def _reuse_features(self, row, *, original=None):
+        """копирует готовую разметку только дословного текста того же языка и близкой даты"""
+        if original is None:
+            original = self._session.scalar(
+                select(News)
+                .where(
+                    News.id != row.id,
+                    News.content_hash == row.content_hash,
+                    News.language == row.language,
+                    News.tagging_status == "ready",
+                    News.published_at.between(
+                        row.published_at - timedelta(days=2),
+                        row.published_at + timedelta(days=2),
+                    ),
+                )
+                .order_by(News.id)
+                .limit(1)
+            )
+        if original is None:
+            return
+        features = NewsFeatures.model_validate(original.extracted_features).model_copy(
+            update={"news_id": row.id}
+        )
+        row.extracted_features = features.model_dump(mode="json")
+        row.tagging_status, row.tagging_version, row.summary = (
+            "ready",
+            original.tagging_version,
+            original.summary,
+        )
+        self._session.execute(delete(NewsTag).where(NewsTag.news_id == row.id))
+        for tag in self._session.scalars(
+            select(NewsTag).where(NewsTag.news_id == original.id)
+        ):
+            self._session.add(
+                NewsTag(
+                    news_id=row.id,
+                    tag_id=tag.tag_id,
+                    llm_confidence=tag.llm_confidence,
+                    tagger_version=tag.tagger_version,
+                )
+            )
+        self._session.flush()
 
     def list_candidates(
         self,

@@ -9,6 +9,8 @@ from app.schemas.reports import ReportInput, ReportPart
 
 from ._common import digest
 
+IMPORT_VERSION = "reviewed-text-v2"
+
 
 def split_report_text(content: str, limit: int = 3000) -> list[str]:
     """разбивает текст по границам предложений или слов, не теряя остаток блока"""
@@ -66,12 +68,22 @@ class ReportService:
                 parts = []
                 for page_info in manifest["pages"]:
                     filename = page_info["json"]
-                    if Path(filename).name != filename:
+                    if Path(filename).name != filename or "\\" in filename:
                         raise ValueError("Invalid page filename")
                     page = json.loads(
                         (manifest_path.parent / filename).read_text(encoding="utf-8")
                     )
-                    for block in page["blocks"]:
+                    blocks = page.get("display_blocks", page.get("blocks", []))
+                    if page.get("manual_transcription"):
+                        blocks = [
+                            {
+                                "number": 0,
+                                "status": "text_candidate",
+                                "display_text": page["manual_transcription"],
+                                "method": "manual_transcription",
+                            }
+                        ]
+                    for block in blocks:
                         if block.get("status") != "text_candidate":
                             continue
                         content = block.get(
@@ -88,7 +100,7 @@ class ReportService:
                                     source_span_json={
                                         "block": block["number"],
                                         "bbox": block.get("bbox"),
-                                        "method": "ocr",
+                                        "method": block.get("method", "ocr"),
                                         "review_status": page_info.get(
                                             "review_status", "unknown"
                                         ),

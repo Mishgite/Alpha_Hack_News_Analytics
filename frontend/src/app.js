@@ -270,7 +270,8 @@ async function login() {
 }
 function sourceName(url) {
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return ({ "cbr.ru": "Банк России", "tass.ru": "ТАСС", "interfax.ru": "Интерфакс", "consultant.ru": "КонсультантПлюс", "xn--b1ag8a.xn--p1ai": "све.рф" })[host] || host;
   } catch {
     return isDemo ? "Учебная публикация" : "Источник не указан";
   }
@@ -449,14 +450,16 @@ function reason(id) {
   const item = state.feed?.items.find((item) => item.ranking.news_id === id);
   if (!item) return;
   const r = item.ranking;
-  const hasGeography = ["formula-v2-geography", "formula-v3-business-context"].includes(r.ranking_version);
+  const hasGeography = r.geography_reason != null;
   const topics = r.matched_signals.length
     ? `<div class="tags">${r.matched_signals.map(tag).join("")}</div>`
-    : "<p>В сохранённой подборке нет сведений о совпавших темах.</p>";
+    : (r.counterparty_signals?.length ? "" : "<p>В сохранённой подборке нет сведений о совпавших темах.</p>");
+  const topicSection = topics ? `<section><h3>Совпадение тем</h3>${topics}</section>` : "";
+  const counterparties = r.counterparty_signals?.length ? `<section><h3>Отрасли контрагентов</h3><div class="tags">${r.counterparty_signals.map(tag).join("")}</div><p>Эти отрасли встречаются у контрагентов компании в данных о платежах. Их новости учитываются с меньшим приоритетом.</p></section>` : "";
   const geography = hasGeography
     ? `<section><h3>Регион</h3><p>${(r.geography_factor ?? 1) < 1 ? "Событие относится к другому региону. Поэтому его приоритет ниже." : r.geography_bonus > 0 ? esc(r.geography_reason) + ". Это повысило позицию новости." : r.geography_score == null ? "География не уточнена и не влияет на порядок." : r.geography_score > 0 ? "Регион совпал, но совпадений по темам нет. Поэтому география не повысила позицию новости." : "География новости не совпала с данными компании. Дополнительный приоритет за регион не добавлен."}</p></section>`
     : "";
-  panel("Почему эта новость", `<p class="reason-article">${esc(item.title)}</p><section><h3>Совпадение тем</h3>${topics}</section><section><h3>Свежесть</h3><p>Опубликована ${date(item.published_at)}. Более свежие новости получают больший приоритет.</p></section>${geography}`);
+  panel("Почему эта новость", `<p class="reason-article">${esc(item.title)}</p>${topicSection}${counterparties}<section><h3>Свежесть</h3><p>Опубликована ${date(item.published_at)}. Более свежие новости получают больший приоритет.</p></section>${geography}`);
   dialog.classList.add("reason-dialog");
 }
 async function article(id) {
@@ -465,9 +468,11 @@ async function article(id) {
     : null;
   const a = await loadPanel("Новость", () => api.request("GET", "/api/news/" + id), () => article(id));
   if (!a) return;
+  const publications = (a.publications || []).filter((p) => p.source_url !== a.source_url);
+  const otherSources = publications.length ? `<details class="event-sources"><summary>Другие публикации об этом событии · ${publications.length}</summary>${publications.map((p) => `<div class="event-source"><strong>${esc(p.title)}</strong><small>${esc(sourceName(p.source_url))} · ${date(p.published_at)}</small>${safeUrl(p.source_url) ? `<a class="text-button" href="${esc(safeUrl(p.source_url))}" target="_blank" rel="noopener noreferrer">Открыть источник ${icon("external")}</a>` : ""}${p.news_id !== id ? `<button class="text-button" data-action="article" data-id="${esc(p.news_id)}">Читать публикацию</button>` : ""}</div>`).join("")}</details>` : "";
   panel(
     a.title,
-    `<div class="news-meta">${esc(sourceName(a.source_url))} · ${date(a.published_at)}</div><div class="tags">${(a.features?.tags || []).map((t) => tag(t.id)).join("")}</div><p class="article-text">${esc(a.text)}</p>${safeUrl(a.source_url) ? `<a class="button secondary" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(a.source_url))}">Открыть первоисточник ${icon("external")}</a>` : `<div class="notice">Ссылка на первоисточник отсутствует</div>`}<button class="button primary" data-action="analyse" data-id="${esc(id)}">${icon("spark")}Разобрать влияние на компанию</button>`,
+    `<div class="news-meta">${esc(sourceName(a.source_url))} · ${date(a.published_at)}</div><div class="tags">${(a.features?.tags || []).map((t) => tag(t.id)).join("")}</div><p class="article-text">${esc(a.text)}</p>${safeUrl(a.source_url) ? `<a class="button secondary" target="_blank" rel="noopener noreferrer" href="${esc(safeUrl(a.source_url))}">Открыть первоисточник ${icon("external")}</a>` : `<div class="notice">Ссылка на первоисточник отсутствует</div>`}${otherSources}<button class="button primary" data-action="analyse" data-id="${esc(id)}">${icon("spark")}Разобрать влияние на компанию</button>`,
   );
   if (snapshot) interactions.open(snapshot, id).catch(() => {});
 }
@@ -618,7 +623,17 @@ async function statementFeatures(index) {
     FTS_COUNTRY_NAME: "Страны внешнеэкономической деятельности",
     AMOUNT_WORKERS_FNS_GRADATION: "Диапазон численности работников",
     COMPANY_AGE_YEARS_GRADATION: "Возраст компании",
+    industry_position_in_dataset: "Сравнение выручки внутри набора данных",
+    market_share_status: "Доля рынка",
+    group_companies_in_dataset: "Компании группы в наборе данных",
+    linked_companies_in_dataset: "Связанные компании в наборе данных",
+    payment_data_scope: "Ограничения платёжных данных",
+    payment_incoming_counterparties: "Отправители платежей в выборке",
+    payment_outgoing_counterparties: "Получатели платежей в выборке",
+    payment_incoming_largest_share_pct: "Доля крупнейшего отправителя в выборке, %",
+    payment_outgoing_largest_share_pct: "Доля крупнейшего получателя в выборке, %",
   };
+  Object.assign(labels, {"linked_company_sectors": "Связанные через физлиц компании: ОКВЭД и количество", "linked_company_regions": "Связанные через физлиц компании: регионы и количество", "group_company_sectors": "Компании группы: ОКВЭД и количество", "group_company_regions": "Компании группы: регионы и количество", "payment_incoming_sectors": "Входящие платежи: ОКВЭД контрагентов и доли, %", "payment_incoming_regions": "Входящие платежи: регионы контрагентов и доли, %", "payment_incoming_known_share_pct": "Входящие платежи: доля с известным профилем контрагента, %", "payment_incoming_group_share_pct": "Входящие платежи: доля внутри группы, %", "payment_outgoing_sectors": "Исходящие платежи: ОКВЭД контрагентов и доли, %", "payment_outgoing_regions": "Исходящие платежи: регионы контрагентов и доли, %", "payment_outgoing_known_share_pct": "Исходящие платежи: доля с известным профилем контрагента, %", "payment_outgoing_group_share_pct": "Исходящие платежи: доля внутри группы, %"});
   const origin = context.payload_json.profile_json?._source;
   const rows = statement.company_feature_refs
     .map((key) => {
@@ -635,11 +650,16 @@ async function statementFeatures(index) {
           : Array.isArray(value)
             ? value.join(", ")
             : typeof value === "object"
-              ? JSON.stringify(value)
+              ? Object.entries(value).map(([name, amount]) => `${name}: ${amount}`).join("; ")
               : String(value);
       const origins = (context.payload_json.features || []).filter(
         (item) => item.key === key,
       );
+      const derived = context.payload_json.profile_json?._context_sources;
+      const sourceKey = key.startsWith("payment_") ? "payments" : key.startsWith("linked_") ? "links" : (key.startsWith("group_") || key === "industry_position_in_dataset") ? "companies" : null;
+      if (!origins.length && sourceKey && derived?.[sourceKey]) {
+        origins.push({ origin_file: derived[sourceKey].file, calc_method: "Расчёт по предоставленной выборке" });
+      }
       return `<div><dt>${esc(labels[key] || "Дополнительные данные")}</dt><dd>${esc(display)}${origins.length ? `<details class="data-origin"><summary>Источник данных</summary>${origins.map((item) => `<small>${esc([item.origin_file, item.origin_field, item.calc_method].filter(Boolean).join(" · "))}</small>`).join("")}</details>` : ""}</dd></div>`;
     })
     .join("");
@@ -653,15 +673,36 @@ function renderAnalysis() {
     r = a.result;
   analysisFrame(
     state.article,
-    `<div class="analysis-layout"><div class="analysis-main"><div class="saved-analysis"><button class="text-button" data-action="update-analysis">Проверить актуальность</button></div>${a.status === "partial" ? `<div class="notice warning analysis-limitations"><strong>Разбор готов с ограничениями</strong>${r.limitations.length ? `<p>${esc(r.limitations[0])}</p>` : ""}${r.limitations.length > 1 ? `<details><summary>Остальные ограничения</summary><ul>${r.limitations.slice(1).map((value) => `<li>${esc(value)}</li>`).join("")}</ul></details>` : ""}</div>` : ""}<section class="analysis-section"><div class="section-heading"><h2>Что произошло</h2></div>${statements(r.facts)}</section><section class="analysis-section"><div class="section-heading"><h2>Влияние на компанию</h2><span class="ai-label">Вывод AI</span></div>${statements(r.why_important)}<div class="impact-grid"><div class="impact risk"><h3>${icon("info")}Возможные риски</h3>${statements(r.risks)}</div><div class="impact opportunity"><h3>${icon("plus")}Возможности</h3>${statements(r.opportunities)}</div></div></section><section class="bank-section"><div class="section-heading"><h2>Материалы банка</h2></div>${r.bank_position ? `<span class="label-badge">${isDemo ? "Синтетический пример, не позиция Альфа-Банка" : "Вывод по материалу банка"}</span>${statements([r.bank_position])}` : "<p>Подходящий материал не найден. Выводы AI выше не являются позицией Альфа-Банка.</p>"}</section><section class="analysis-section"><div class="section-heading"><h2>Что проверить дальше</h2></div><ol class="recommendations">${r.recommendations.map((s) => `<li>${statements([s])}</li>`).join("")}</ol></section><section class="question-section"><div><h2>Вопрос по разбору</h2></div><div class="suggested-questions"><button data-question="Каких данных не хватает для оценки влияния?">Каких данных не хватает?</button><button data-question="Что проверить в первую очередь?">Что проверить сначала?</button></div><div id="conversation" aria-live="polite"></div><form id="question-form"><label class="sr-only" for="question">Вопрос по разбору</label><textarea id="question" name="question" required maxlength="1000" placeholder="Например, как это связано с расходами компании?" rows="2"></textarea><div><button class="button primary" type="submit">Задать вопрос ${icon("arrow")}</button></div></form></section></div><aside class="analysis-aside"><section class="sources-card"><h3>Источники разбора <span>${r.source_refs.length}</span></h3>${r.source_refs.map((s, i) => `<button class="source-row" data-source="${esc(s.id)}"><span class="source-number">${i + 1}</span><span><strong>${esc(s.title)}</strong><small>${s.kind === "company" ? "Данные компании" : s.kind === "bank_report" ? "Материал банка · стр. " + s.page : "Новостной материал"}${s.published_on ? " · " + s.published_on : ""}</small></span>${icon("arrow")}</button>`).join("")}</section><button class="trace-button" data-action="trace">${icon("sliders")}Как получен разбор ${icon("arrow")}</button><p class="fine">Выводы AI могут содержать ошибки. Сверяйтесь с источниками.</p></aside></div>`,
+    `<div class="analysis-layout"><div class="analysis-main"><div class="saved-analysis"><button class="text-button" data-action="update-analysis">Проверить актуальность</button></div>${a.status === "partial" ? `<div class="notice warning analysis-limitations"><strong>Разбор готов с ограничениями</strong>${r.limitations.length ? `<p>${esc(r.limitations[0])}</p>` : ""}${r.limitations.length > 1 ? `<details><summary>Остальные ограничения</summary><ul>${r.limitations.slice(1).map((value) => `<li>${esc(value)}</li>`).join("")}</ul></details>` : ""}</div>` : ""}<section class="analysis-section"><div class="section-heading"><h2>Что произошло</h2></div>${statements(r.facts)}</section><section class="analysis-section"><div class="section-heading"><h2>Влияние на компанию</h2><span class="ai-label">Вывод AI</span></div>${statements(r.why_important)}<div class="impact-grid"><div class="impact risk"><h3>${icon("info")}Возможные риски</h3>${statements(r.risks)}</div><div class="impact opportunity"><h3>${icon("plus")}Возможности</h3>${statements(r.opportunities)}</div></div></section><section class="bank-section"><div class="section-heading"><h2>Материалы банка</h2></div>${r.bank_position ? `<span class="label-badge">${isDemo ? "Синтетический пример, не позиция Альфа-Банка" : "Вывод по материалу банка"}</span>${statements([r.bank_position])}` : "<p>Подходящий материал не найден. Выводы AI выше не являются позицией Альфа-Банка.</p>"}</section><section class="analysis-section"><div class="section-heading"><h2>Что проверить дальше</h2></div><ol class="recommendations">${r.recommendations.map((s) => `<li>${statements([s])}</li>`).join("")}</ol></section><div id="analysis-feedback" class="analysis-feedback" aria-live="polite"></div><section class="question-section"><div><h2>Вопрос по разбору</h2></div><div class="suggested-questions"><button data-question="Каких данных не хватает для оценки влияния?">Каких данных не хватает?</button><button data-question="Что проверить в первую очередь?">Что проверить сначала?</button></div><div id="conversation" aria-live="polite"></div><form id="question-form"><label class="sr-only" for="question">Вопрос по разбору</label><textarea id="question" name="question" required maxlength="1000" placeholder="Например, как это связано с расходами компании?" rows="2"></textarea><div><button class="button primary" type="submit">Задать вопрос ${icon("arrow")}</button></div></form></section></div><aside class="analysis-aside"><section class="sources-card"><h3>Источники разбора <span>${r.source_refs.length}</span></h3>${r.source_refs.map((s, i) => `<button class="source-row" data-source="${esc(s.id)}"><span class="source-number">${i + 1}</span><span><strong>${esc(s.title)}</strong><small>${s.kind === "company" ? "Данные компании" : s.kind === "bank_report" ? "Материал банка · стр. " + s.page : "Новостной материал"}${s.published_on ? " · " + s.published_on : ""}</small></span>${icon("arrow")}</button>`).join("")}</section><button class="trace-button" data-action="trace">${icon("sliders")}Как получен разбор ${icon("arrow")}</button><p class="fine">Выводы AI могут содержать ошибки. Сверяйтесь с источниками.</p></aside></div>`,
   );
+  loadUsefulness(a.id);
+}
+async function loadUsefulness(id) {
+  const target = $("#analysis-feedback");
+  if (!target) return;
+  try {
+    const value = await api.request("GET", `/api/analyses/${id}/feedback`);
+    if (state.analysis?.id !== id || !target.isConnected) return;
+    target.innerHTML = [true, false].map((useful) => `<button class="button secondary" data-action="rate-analysis" data-id="${esc(id)}" data-useful="${useful}" aria-pressed="${value.useful === useful}">${useful ? "Разбор помог" : "Не помог"}</button>`).join("");
+  } catch {
+    if (target.isConnected) target.innerHTML = '<button class="text-button" data-action="retry-rating">Оценить разбор</button>';
+  }
+}
+function answerBody(answer) {
+  const marker = "\n\nОграничения: ";
+  const position = answer.indexOf(marker);
+  if (position < 0) return `<p>${esc(answer)}</p>`;
+  const body = answer.slice(0, position).trim();
+  const limits = answer.slice(position + marker.length).trim();
+  if (!body) return `<p>${esc(limits)}</p>`;
+  return `<p>${esc(body)}</p>${limits ? `<details class="answer-limitations"><summary>Ограничения ответа</summary><p>${esc(limits)}</p></details>` : ""}`;
 }
 function renderConversation() {
   if (!$("#conversation")) return;
   $("#conversation").innerHTML = state.messages
     .map(
       (m) =>
-        `<div class="chat-question">${esc(m.question)}</div><div class="chat-answer">${icon("spark")}<div><p>${esc(m.answer)}</p>${
+        `<div class="chat-question">${esc(m.question)}</div><div class="chat-answer">${icon("spark")}<div>${answerBody(m.answer)}${
           (m.sources_json || [])
             .filter(
               (s) => s && typeof s === "object" && typeof s.id === "string",
@@ -962,6 +1003,17 @@ document.addEventListener("click", async (e) => {
   const action = b.dataset.action,
     id = b.dataset.id;
   try {
+    if (action === "retry-rating") await loadUsefulness(state.analysis.id);
+    if (action === "rate-analysis") {
+      const group = $("#analysis-feedback");
+      group?.querySelectorAll("button").forEach((item) => { item.disabled = true; });
+      try {
+        await api.request("PUT", `/api/analyses/${b.dataset.id}/feedback`, { useful: b.dataset.useful === "true" });
+        if (state.analysis?.id === b.dataset.id) await loadUsefulness(b.dataset.id);
+      } finally {
+        group?.querySelectorAll("button").forEach((item) => { item.disabled = false; });
+      }
+    }
     if (action === "theme") {
       const next =
         document.documentElement.dataset.theme === "dark" ? "light" : "dark";

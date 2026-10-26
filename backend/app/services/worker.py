@@ -4,6 +4,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from uuid import uuid4
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -38,6 +39,7 @@ class BackgroundWorker:
         reports=None,
         market=None,
         runtime=None,
+        quality=None,
         fetcher=fetch_rss_feed,
         enricher=enrich_news_items,
     ):
@@ -54,6 +56,13 @@ class BackgroundWorker:
         self.profiles = profiles if profiles is not None else ProfilePipeline()
         self.market = market if market is not None else MarketService()
         self.runtime = runtime if runtime is not None else RuntimeService()
+        from app.services.quality import QualityService
+
+        self.quality = (
+            quality
+            if quality is not None
+            else QualityService(uow_factory=self.runtime._uow)
+        )
         self.analysis_enabled = True
         self.fetcher = fetcher
         self.enricher = enricher
@@ -73,6 +82,17 @@ class BackgroundWorker:
             timeout=20,
             fetch_full_text=False,
         )
+        if source.categories:
+            allowed = {name.casefold() for name in source.categories}
+            items = [
+                item
+                for item in items
+                if allowed.intersection(
+                    str(tag.get("term", "")).casefold()
+                    for tag in (item.raw or {}).get("tags", [])
+                    if isinstance(tag, dict)
+                )
+            ]
         items = items[: source.limit]
         if source.full_text:
             items = await asyncio.to_thread(
@@ -239,6 +259,7 @@ class BackgroundWorker:
 
     async def _call(self, name, operation, *args):
         """изолирует ошибку одной операции, чтобы остальные фоновые задачи продолжили работу"""
+        started, success, idle = monotonic(), False, False
         try:
             result = await operation(*args)
             errors = (
@@ -246,10 +267,58 @@ class BackgroundWorker:
                 if isinstance(result, dict)
                 else getattr(result, "errors", [])
             )
-            return not bool(errors)
+            success = not bool(errors)
+            idle = isinstance(result, dict) and result.get("skipped") is True
+            idle = (
+                idle
+                or (name == "analysis" and result is None)
+                or (
+                    name == "profiles"
+                    and isinstance(result, dict)
+                    and result.get("processed") == 0
+                    and not errors
+                )
+            )
+            return success
         except Exception as error:  # noqa: BLE001
             logger.error("Worker task=%s error=%s", name, type(error).__name__)
             return False
+        finally:
+            if name not in {"heartbeat", "monitoring"} and not idle:
+                try:
+                    await asyncio.to_thread(
+                        self.runtime.record_operation,
+                        name,
+                        monotonic() - started,
+                        success,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.error("Worker operation metrics could not be saved")
+
+    async def monitor(self):
+        """обновляет агрегаты и пишет предупреждение только при изменении набора проблем"""
+        previous = await asyncio.to_thread(self.runtime.get, "monitoring")
+        result = await asyncio.to_thread(self.quality.snapshot, persist=True)
+        if result["alerts"] and result["alerts"] != (previous or {}).get(
+            "value", {}
+        ).get("alerts"):
+            logger.warning("Monitoring alerts: %s", ", ".join(result["alerts"]))
+        return result
+
+    async def check_quality(self):
+        """проверяет раз в сутки и после изменения кода, повторяет сбой на следующем часовом проходе"""
+        from app.evaluate import source_version
+
+        previous = await asyncio.to_thread(self.runtime.get, "quality_check")
+        if (
+            previous
+            and previous["value"].get("passed")
+            and previous["value"].get("source_hash")
+            == await asyncio.to_thread(source_version)
+            and (datetime.now(UTC) - previous["updated_at"]).total_seconds() < 86400
+        ):
+            return {"skipped": True}
+        return await asyncio.to_thread(self.quality.evaluate)
 
     async def _repeat(self, name, interval, operation, *args):
         """ждёт интервал после завершения операции и не запускает её повторно параллельно самой себе"""
@@ -314,6 +383,8 @@ class BackgroundWorker:
         # TaskGroup завершает все циклы вместе, отдельный сервис не держит общую сессию БД
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(self._repeat("heartbeat", 15, self.heartbeat))
+            tasks.create_task(self._repeat("monitoring", 60, self.monitor))
+            tasks.create_task(self._repeat("quality", 3600, self.check_quality))
             tasks.create_task(
                 self._repeat(
                     "profiles", self.settings.profile_interval, self.process_profiles

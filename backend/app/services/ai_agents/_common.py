@@ -5,7 +5,8 @@ import logging
 import math
 import os
 import re
-from time import monotonic
+from time import monotonic, sleep
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -107,8 +108,13 @@ def validate_features(result, catalog):
     ids = [tag.id for tag in result.tags]
     if len(ids) > 50 or len(ids) != len(set(ids)):
         raise ValueError("Duplicate or excessive tags")
-    if set(ids) - set(catalog["business"].values()):
-        raise ValueError("Unknown business tag")
+    unknown = set(ids) - set(catalog["business"].values())
+    if unknown:
+        raise ValueError(
+            "Unknown business tag: "
+            + ", ".join(sorted(unknown))
+            + ". Удали эти коды или замени на подходящие коды из business"
+        )
     regions = result.geography.region_codes
     if len(regions) != len(set(regions)) or set(regions) - set(
         catalog["region"].values()
@@ -132,6 +138,49 @@ def normalize_city_codes(result, catalog):
         )
         result.geography.city_codes = normalized
     return result
+
+
+def model_features(model_key, instruction, payload, catalog, schema, transport=None):
+    """один раз просит исправить неверные коды или структуру, затем возвращает ошибку"""
+    from pydantic import ValidationError
+
+    correction = None
+    for attempt in range(2):
+        try:
+            result = model_object(
+                model_key,
+                instruction,
+                {**payload, **({"validation_error": correction} if correction else {})},
+                catalog,
+                schema,
+                transport,
+            )
+            normalize_city_codes(result, catalog)
+            validate_features(result, catalog)
+            summary = getattr(result, "summary", None) or ""
+            if (
+                len(re.findall(r"[A-Za-z]", summary)) > 30
+                and len(re.findall(r"[А-Яа-яЁё]", summary)) < 10
+            ):
+                raise ValueError(
+                    "Перепиши summary на русском языке, сохрани факты и модальность событий"
+                )
+            if set(getattr(result, "industries", [])) - set(
+                catalog["business"].values()
+            ):
+                raise ValueError("Unknown industry code")
+            return result
+        except ValueError as error:
+            if attempt:
+                raise
+            correction = (
+                [
+                    {"field": list(item["loc"]), "error": item["msg"]}
+                    for item in error.errors(include_input=False, include_url=False)[:8]
+                ]
+                if isinstance(error, ValidationError)
+                else str(error)[:300]
+            )
 
 
 def settings():
@@ -179,8 +228,19 @@ def check_gateway_budget(config, runtime):
         headers={"Authorization": "Bearer " + config["LLM_API_KEY"]},
     )
     try:
-        with build_opener(NoRedirect).open(request, timeout=15) as response:
-            raw = response.read(65537)
+        for attempt in range(3):
+            try:
+                with build_opener(NoRedirect).open(request, timeout=15) as response:
+                    raw = response.read(65537)
+                break
+            except (URLError, TimeoutError) as error:
+                if attempt == 2 or (
+                    isinstance(error, HTTPError)
+                    and error.code not in {429, 502, 503, 504}
+                ):
+                    raise
+                # повторяем только чтение остатка, платный запрос ещё не отправлен
+                sleep(0.5 * (attempt + 1))
         if len(raw) > 65536:
             raise ValueError("Budget response too large")
         info = json.loads(raw)["info"]
@@ -195,8 +255,12 @@ def check_gateway_budget(config, runtime):
             raise ValueError("Invalid gateway budget")
         if info.get("blocked") or info.get("status", "active") != "active":
             raise RuntimeError("Gateway key is blocked")
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        raise RuntimeError("Gateway budget could not be checked") from None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        logger.warning(
+            "Gateway budget check failed: status=%s",
+            getattr(error, "code", type(error).__name__),
+        )
+        raise RuntimeError("Gateway budget could not be checked") from error
     remaining = max(0, limit - spent)
     runtime.save(
         "llm_budget",
@@ -292,15 +356,16 @@ def model_object(model_key, instruction, payload, catalog, schema, transport=Non
             raw = model_content(response)
             result = schema.model_validate_json(raw)
             status = "ready"
-        except OSError:
+        except OSError as error:
             logger.warning(
-                "LLM request failed: model=%s duration=%.2f",
+                "LLM request failed: model=%s status=%s duration=%.2f",
                 model,
+                getattr(error, "code", "network"),
                 monotonic() - started,
             )
             raise RuntimeError(
                 "Model API request failed; check provider configuration"
-            ) from None
+            ) from error
         except (json.JSONDecodeError, UnicodeDecodeError):
             raise RuntimeError("Invalid model API response") from None
         finally:

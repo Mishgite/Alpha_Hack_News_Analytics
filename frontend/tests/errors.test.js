@@ -9,6 +9,16 @@ const response = (detail, status) => new Response(JSON.stringify({ detail }), {
 });
 const forbidden = /worker|CORS|SQL|VITE_|internal_key|snapshot_id|TypeError|обработчик|сервер|модель/i;
 
+test("при исчерпанном лимите новые разборы не обещаются доступными", async () => {
+  const api = createHttpClient({ baseUrl: "https://example.test", storage,
+    fetcher: async () => response("Analysis generation paused", 503) });
+  await assert.rejects(api.request("POST", "/api/news/test/analysis", {}), error => {
+    assert.match(userMessage(error), /Новые разборы и ответы временно недоступны/);
+    assert.doesNotMatch(userMessage(error), forbidden);
+    return true;
+  });
+});
+
 for (const status of [400, 403, 404, 409, 418, 422, 429, 500, 502, 503, 504]) {
   test(`HTTP ${status}: внутреннее описание не попадает в текст интерфейса`, async () => {
     const detail = "SQL worker internal_key CORS snapshot_id";
