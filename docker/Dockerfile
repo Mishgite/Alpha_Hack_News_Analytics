@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12.7-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -14,10 +14,9 @@ RUN apt-get update \
         tesseract-ocr-rus \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/app/requirements.txt /workspace/backend/app/requirements.txt
-RUN python -m pip install --no-cache-dir \
-    -r /workspace/backend/app/requirements.txt \
-    pymupdf
+COPY backend/app/requirements.lock /workspace/backend/app/requirements.lock
+RUN python -m pip install --no-cache-dir --require-hashes \
+    -r /workspace/backend/app/requirements.lock
 
 COPY backend/app /workspace/backend/app
 
