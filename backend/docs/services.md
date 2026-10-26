@@ -2,6 +2,8 @@
 
 API вызывает методы сервисов, сервисы работают с БД через репозитории
 
+Связи таблиц и границы слоёв: [схемы бэкенда](architecture.md#база-данных)
+
 - Все методы синхронные; из `async def` их нужно вызывать через `asyncio.to_thread`
 - Сервис сам открывает сессию и сохраняет изменения; вручную вызывать `commit()` не нужно
 - Результаты являются Pydantic-моделями и доступны после закрытия сессии
@@ -163,6 +165,8 @@ from app.schemas.news import NewsFeatures, NewsTag, Geography
 
 ## FeedService: персональная лента
 
+[Схема формирования ленты](architecture.md#персональная-лента)
+
 ```python
 from app.services import FeedService
 from app.schemas.ranking import RankingRequest, RankingResult
@@ -227,6 +231,8 @@ from app.services import FeedbackService
 Записывает первое открытие текста новости из снимка. Параметры и защита от повторов такие же, как у `record_impression`; тип события `open`. Метод вызывается отдельно после отображения новости, а не при любом чтении записи из БД. Показ и открытие имеют разные `event_id`.
 
 ## InsightService: AI-разборы и вопросы
+
+[Последовательность запросов и состояния задания](architecture.md#ai-разбор)
 
 ```python
 from app.services import InsightService
@@ -341,6 +347,8 @@ from app.schemas.insights import InsightResult, SourceReference
 У всех сервисов есть необязательный параметр конструктора `uow_factory=UnitOfWork` для замены способа открытия транзакций; при обычном использовании он не передаётся
 
 ## NewsPipeline: парсер, разметка и сохранение
+
+[Схема сбора и разметки новостей](architecture.md#обработка-новостей)
 
 Импорт: `from app.services import NewsPipeline`
 
